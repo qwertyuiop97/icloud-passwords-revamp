@@ -1,0 +1,6 @@
+.DS_Store
+prefs.plist
+__pycache__/
+*.pyc
+*.scpt
+.venv/
