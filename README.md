@@ -1,66 +1,73 @@
-# iCloud Passwords for Alfred
+# iCloud Passwords Revamp
 
 Alfred 5 workflow for Apple’s Passwords app on macOS Sequoia, Tahoe, and Golden Gate.
 
-Search a site or account, then copy the first matching password, user name, or verification code.
+Type `pw arizona` and matching logins appear under the query. The main text is the email or user name. The subtitle is the app, website, or URL. Return fills the login form in front of you.
 
-Apple does not expose iCloud Keychain logins to `security`, AppleScript, or Shortcuts. This workflow opens Passwords, waits for Touch ID, searches, and uses the app’s own **Copy Password**, **Copy User Name**, and **Copy Code** menu commands.
+This is an independent workflow, not a fork. It has to work for whoever installs it, against **their** iCloud Passwords vault. It never ships anyone’s logins.
 
-This is an independent project. It is not a fork of older Safari preference-pane workflows, which Apple removed.
+## What ↩ does on a login page
 
-## Requirements
+On a page like University WebAuth (NetID + Password):
 
-- macOS Sequoia 15 or later, including Tahoe and Golden Gate
+1. Type `pw arizona`
+2. Pick the row whose main text is the right email / NetID
+3. Return fills **NetID**, then **Password**
+
+It will not paste a password into the NetID / email / user name field.
+
+If only a user name field is focused, it fills the user name. If only a password field is focused, it fills the password.
+
+## Setup
+
+- macOS Sequoia 15 or later
 - Alfred 5 with the Powerpack
-- Accessibility permission for Alfred
-- iCloud Keychain signed in
+- System Settings → Privacy & Security → Accessibility → **Alfred**
+- Unlock Passwords with Touch ID the first time a search needs the vault
 
 ## Install
 
-Download `iCloud-Passwords.alfredworkflow` from [Releases](https://github.com/qwertyuiop97/alfred-icloud-passwords/releases) and double-click it.
+Download `iCloud-Passwords-Revamp.alfredworkflow` from
+[Releases](https://github.com/qwertyuiop97/icloud-passwords-revamp/releases)
+and double-click it.
 
 From source:
 
 ```sh
 python3 build.py
-open dist/iCloud-Passwords.alfredworkflow
+open dist/iCloud-Passwords-Revamp.alfredworkflow
 ```
 
-On first use, unlock Passwords with Touch ID if asked, and allow Alfred to control the computer.
+## Use
 
-## Usage
-
-| Keyword | Action |
+| Input | Result |
 | --- | --- |
-| `p github` | Open Passwords and search for `github` |
-| `fp github` | Copy the first result’s password and quit Passwords |
-| `otp github` | Copy the first result’s verification code and quit Passwords |
-
-Modifiers on `p`:
-
-- **⌘↩** copy password
-- **⌥↩** copy verification code
-- **⌃↩** copy user name
+| `pw` | Suggests logins for the current browser tab when possible |
+| `pw arizona` | Every saved login whose site, URL, or email matches |
+| ↩ | Fill user name then password |
+| ⌘↩ | Copy password (marked concealed for clipboard history) |
+| ⌥↩ | Copy verification code |
+| ⌃↩ | Copy user name |
+| ⇧↩ | Reveal the item in Passwords |
 
 ## Preferences
 
-Configure Workflow has four settings:
+1. **Search keyword** (default `pw`)
+2. **Current tab** — suggest logins for the open browser tab
+3. **Fill both fields** — user name and password together on login forms
+4. **Close after fill**
 
-1. **Search keyword** (default `p`)
-2. **Copy password keyword** (default `fp`)
-3. **Copy OTP keyword** (default `otp`)
-4. **Close after copy** (on by default)
+## Safety
 
-## Permissions
-
-System Settings → Privacy & Security → Accessibility → enable **Alfred**. If a prompt names `osascript`, enable that too.
-
-The workflow never reads the keychain. It only drives the Passwords UI after you unlock it.
+- Password text never enters the Python process
+- Alfred results contain site + user name only
+- Paste of a password is refused unless the focused field is a password field
+- Clipboard password copies are stamped `org.nspasteboard.ConcealedType`
+- The clipboard is cleared after an auto-fill of a password
 
 ## Development
 
 ```sh
+PYTHONPATH=. python3 -m unittest discover -s tests -v
 python3 build.py
-make install
-python3 titles.py
 ```

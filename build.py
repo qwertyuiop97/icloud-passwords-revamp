@@ -10,229 +10,187 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
-BUNDLE_ID = "com.qwertyuiop97.alfred-icloud-passwords"
-REPO_URL = "https://github.com/qwertyuiop97/alfred-icloud-passwords"
+NAME = "iCloud Passwords Revamp"
+BUNDLE_ID = "com.qwertyuiop97.icloud-passwords-revamp"
+REPO_URL = "https://github.com/qwertyuiop97/icloud-passwords-revamp"
 
-OBJECTS = {
-    "kw_search": "keyword.search",
-    "kw_password": "keyword.password",
-    "kw_otp": "keyword.otp",
-    "arg_find": "arg.find",
-    "arg_password": "arg.password",
-    "arg_otp": "arg.otp",
-    "arg_username": "arg.username",
-    "script": "action.script",
+UIDS = {
+    "filter": "scriptfilter.search",
+    "action": "action.fill",
 }
-
-MOD_CMD = 1048576
-MOD_OPT = 524288
-MOD_CTRL = 262144
 
 
 def uid(name: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, f"alfred://{BUNDLE_ID}/{name}")).upper()
 
 
-def keyword(uid_name: str, var: str, text: str, subtext: str) -> dict:
-    return {
-        "config": {
-            "argumenttype": 0,
-            "keyword": f"{{var:{var}}}",
-            "subtext": subtext,
-            "text": text,
-            "withspace": True,
-        },
-        "type": "alfred.workflow.input.keyword",
-        "uid": uid(uid_name),
-        "version": 1,
-    }
-
-
-def arg_and_vars(uid_name: str, mode: str) -> dict:
-    return {
-        "config": {
-            "argument": "{query}",
-            "passthroughargument": True,
-            "variables": {"mode": mode},
-        },
-        "type": "alfred.workflow.utility.argument",
-        "uid": uid(uid_name),
-        "version": 1,
-    }
-
-
-def connection(dest: str, modifiers: int = 0, subtext: str = "") -> dict:
-    return {
-        "destinationuid": uid(dest),
-        "modifiers": modifiers,
-        "modifiersubtext": subtext,
-        "vitoclose": False,
-    }
-
-
 def user_config() -> list[dict]:
     return [
         {
             "config": {
-                "default": "p",
-                "placeholder": "p",
+                "default": "pw",
+                "placeholder": "pw",
                 "required": True,
                 "trim": True,
             },
-            "description": "Opens Passwords and searches. ⌘↩ copies the password, ⌥↩ copies the verification code, ⌃↩ copies the user name.",
+            "description": "Type this in Alfred, then a site, URL, or email. Results appear underneath.",
             "label": "Search keyword",
             "type": "textfield",
             "variable": "keyword_search",
         },
         {
             "config": {
-                "default": "fp",
-                "placeholder": "fp",
-                "required": True,
-                "trim": True,
+                "default": True,
+                "required": False,
+                "text": "When the keyword is used alone, suggest logins for the current browser tab",
             },
-            "description": "Copies the password of the first Passwords result, then closes the app if that option is on.",
-            "label": "Copy password keyword",
-            "type": "textfield",
-            "variable": "keyword_password",
-        },
-        {
-            "config": {
-                "default": "otp",
-                "placeholder": "otp",
-                "required": True,
-                "trim": True,
-            },
-            "description": "Copies the verification code of the first Passwords result.",
-            "label": "Copy OTP keyword",
-            "type": "textfield",
-            "variable": "keyword_otp",
+            "description": "Uses the tab’s host (for example arizona.edu) as the first search.",
+            "label": "Current tab",
+            "type": "checkbox",
+            "variable": "suggest_tab",
         },
         {
             "config": {
                 "default": True,
                 "required": False,
-                "text": "Quit Passwords after copying a password, user name, or verification code",
+                "text": "On a login form, fill user name and password together",
             },
-            "description": "Leave this on to match the original workflow. Turn it off to keep the matching account open.",
-            "label": "Close after copy",
+            "description": "Never pastes a password into a user name / NetID / email field.",
+            "label": "Fill both fields",
+            "type": "checkbox",
+            "variable": "fill_both",
+        },
+        {
+            "config": {
+                "default": True,
+                "required": False,
+                "text": "Quit Passwords after filling or copying",
+            },
+            "description": "Passwords stays in the background while you search in Alfred.",
+            "label": "Close after fill",
             "type": "checkbox",
             "variable": "close_after_copy",
         },
     ]
 
 
+README = """# iCloud Passwords Revamp
+
+Alfred 5 workflow for Apple’s Passwords app.
+
+Type `pw arizona` and matching logins appear under the query. The main text is the email or user name. The subtitle is the app, website, or URL. Return fills the login form in the frontmost app.
+
+## Setup
+
+1. Alfred 5 with Powerpack, macOS Sequoia or later.
+2. System Settings → Privacy & Security → Accessibility → Alfred.
+3. Unlock Passwords with Touch ID the first time a search needs it.
+
+## Use
+
+- `pw` — if a browser tab is open, suggest logins for that site
+- `pw arizona` — every saved email for Arizona / arizona.edu
+- ↩ — fill user name then password (NetID + Password on a WebAuth page)
+- ⌘↩ copy password · ⌥↩ copy verification code · ⌃↩ copy user name · ⇧↩ open in Passwords
+
+The workflow never reads password text into its own process. Passwords.app copies the secret, and paste is blocked unless the focused field is a real password field.
+"""
+
+
 def workflow_plist() -> dict:
-    ids = {name: uid(name) for name in OBJECTS}
+    filter_uid = uid(UIDS["filter"])
+    action_uid = uid(UIDS["action"])
     return {
         "bundleid": BUNDLE_ID,
         "category": "Tools",
         "connections": {
-            ids["kw_search"]: [
-                connection("arg_find"),
-                connection("arg_password", MOD_CMD, "Copy password of first result"),
-                connection("arg_otp", MOD_OPT, "Copy verification code of first result"),
-                connection("arg_username", MOD_CTRL, "Copy user name of first result"),
-            ],
-            ids["kw_password"]: [connection("arg_password")],
-            ids["kw_otp"]: [connection("arg_otp")],
-            ids["arg_find"]: [connection("script")],
-            ids["arg_password"]: [connection("script")],
-            ids["arg_otp"]: [connection("script")],
-            ids["arg_username"]: [connection("script")],
+            filter_uid: [
+                {
+                    "destinationuid": action_uid,
+                    "modifiers": 0,
+                    "modifiersubtext": "",
+                    "vitoclose": False,
+                }
+            ]
         },
         "createdby": "qwertyuiop97",
-        "description": "Find and copy iCloud passwords and verification codes from the Passwords app",
+        "description": "Search iCloud Passwords in Alfred and fill the frontmost login form",
         "disabled": False,
-        "name": "iCloud Passwords",
+        "name": NAME,
         "objects": [
-            keyword(
-                "kw_search",
-                "keyword_search",
-                "Find passwords",
-                "Open Passwords and search · ⌘ password · ⌥ OTP · ⌃ user name",
-            ),
-            keyword(
-                "kw_password",
-                "keyword_password",
-                "Copy password of first result",
-                "Search Passwords, copy the first password, and quit",
-            ),
-            keyword(
-                "kw_otp",
-                "keyword_otp",
-                "Copy OTP of the first result",
-                "Search Passwords, copy the first verification code, and quit",
-            ),
-            arg_and_vars("arg_find", "find"),
-            arg_and_vars("arg_password", "password"),
-            arg_and_vars("arg_otp", "otp"),
-            arg_and_vars("arg_username", "username"),
+            {
+                "config": {
+                    "alfredfiltersresults": False,
+                    "alfredfiltersresultsmatchmode": 0,
+                    "argumenttreatemptyqueryasnil": False,
+                    "argumenttrimmode": 0,
+                    "argumenttype": 1,
+                    "escaping": 0,
+                    "keyword": "{var:keyword_search}",
+                    "queuedelaycustom": 3,
+                    "queuedelayimmediatelyinitially": True,
+                    "queuedelaymode": 1,
+                    "queuemode": 2,
+                    "runningsubtext": "Searching Passwords…",
+                    "script": '/usr/bin/python3 ./search.py "$1"\n',
+                    "scriptargtype": 1,
+                    "scriptfile": "",
+                    "skipuniversalaction": True,
+                    "subtext": "Site, URL, user name, or email",
+                    "title": "Search iCloud Passwords",
+                    "type": 5,
+                    "withspace": True,
+                },
+                "type": "alfred.workflow.input.scriptfilter",
+                "uid": filter_uid,
+                "version": 3,
+            },
             {
                 "config": {
                     "concurrently": False,
                     "escaping": 0,
-                    "script": 'mode="${mode:-find}"\nquery="${1-}"\ntitles="$(/usr/bin/python3 ./titles.py)"\n/usr/bin/osascript ./passwords.applescript "$mode" "$query" "$titles"\n',
+                    "script": '/usr/bin/python3 ./action.py "$1"\n',
                     "scriptargtype": 1,
                     "scriptfile": "",
                     "type": 5,
                 },
                 "type": "alfred.workflow.action.script",
-                "uid": ids["script"],
+                "uid": action_uid,
                 "version": 2,
             },
         ],
-        "readme": """# iCloud Passwords
-
-Search Apple’s Passwords app from Alfred and copy the first matching password, user name, or verification code.
-
-## Setup
-
-1. Alfred 5 with Powerpack, macOS Sequoia or later (including Tahoe and Golden Gate).
-2. Grant **Accessibility** to Alfred: System Settings → Privacy & Security → Accessibility.
-3. The first run will open Passwords. Unlock it with Touch ID or your Mac password.
-
-## Keywords
-
-Defaults, all editable in Configure Workflow:
-
-- `p <query>` — open Passwords and search
-- `fp <query>` — copy the first result’s password
-- `otp <query>` — copy the first result’s verification code
-
-From `p`: **⌘↩** password, **⌥↩** OTP, **⌃↩** user name.
-
-Independent Alfred 5 workflow for the macOS Passwords app (Sequoia, Tahoe, Golden Gate). The 2021 Safari preference-pane workflows no longer work.
-""",
+        "readme": README,
         "uidata": {
-            ids["kw_search"]: {"xpos": 50, "ypos": 30},
-            ids["kw_password"]: {"xpos": 50, "ypos": 170},
-            ids["kw_otp"]: {"xpos": 50, "ypos": 310},
-            ids["arg_find"]: {"xpos": 280, "ypos": 50},
-            ids["arg_password"]: {"xpos": 280, "ypos": 190},
-            ids["arg_otp"]: {"xpos": 280, "ypos": 330},
-            ids["arg_username"]: {"xpos": 280, "ypos": 430},
-            ids["script"]: {"xpos": 510, "ypos": 190},
+            filter_uid: {"xpos": 60, "ypos": 80},
+            action_uid: {"xpos": 360, "ypos": 80},
         },
         "userconfigurationconfig": user_config(),
         "variables": {
-            "keyword_search": "p",
-            "keyword_password": "fp",
-            "keyword_otp": "otp",
+            "keyword_search": "pw",
+            "suggest_tab": "1",
+            "fill_both": "1",
             "close_after_copy": "1",
         },
         "variablesdontexport": [],
-        "version": "2.0.0",
+        "version": "3.0.0",
         "webaddress": REPO_URL,
     }
 
 
 WORKFLOW_FILES = (
     "info.plist",
-    "passwords.applescript",
+    "search.py",
+    "action.py",
+    "ui.applescript",
     "titles.py",
-    "run.sh",
     "icon.png",
+    "lib/__init__.py",
+    "lib/fields.py",
+    "lib/results.py",
+    "lib/fill.py",
+    "lib/bridge.py",
+    "lib/inspect.py",
+    "lib/tab.py",
 )
 
 
@@ -244,7 +202,7 @@ def write_plist() -> Path:
 
 def package() -> Path:
     DIST.mkdir(exist_ok=True)
-    archive = DIST / "iCloud-Passwords.alfredworkflow"
+    archive = DIST / "iCloud-Passwords-Revamp.alfredworkflow"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in WORKFLOW_FILES:
             path = ROOT / name
