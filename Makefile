@@ -15,19 +15,11 @@ check: test
 	osacompile -o /tmp/icloud-passwords-revamp-check.scpt ui.applescript
 	rm -f /tmp/icloud-passwords-revamp-check.scpt
 
-install: build check
-	mkdir -p "$(INSTALL_DIR)"
-	python3 - <<'PY'
-from pathlib import Path
-import shutil
-from build import WORKFLOW_FILES, ROOT
-dest = Path.home() / "Library/Application Support/Alfred/Alfred.alfredpreferences/workflows/user.workflow.icloud-passwords-revamp"
-for name in WORKFLOW_FILES:
-    src = ROOT / name
-    target = dest / name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, target)
-PY
+install: build
+	mkdir -p "$(INSTALL_DIR)/lib"
+	cp -f info.plist search.py action.py ui.applescript titles.py icon.png "$(INSTALL_DIR)/"
+	cp -f lib/*.py "$(INSTALL_DIR)/lib/"
+	chmod +x "$(INSTALL_DIR)/search.py" "$(INSTALL_DIR)/action.py" "$(INSTALL_DIR)/ui.applescript"
 
 uninstall:
 	rm -rf "$(INSTALL_DIR)"
