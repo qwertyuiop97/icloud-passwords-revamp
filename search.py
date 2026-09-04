@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alfred Script Filter entry point."""
+"""Alfred Script Filter. Live results as you type."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib.bridge import BridgeError, search as bridge_search
+from lib.cache import local_hits, save
 from lib.results import alfred_json, item_payload, parse_search_output, status_item
 
 
@@ -17,7 +18,7 @@ def _placeholder() -> str:
         [
             {
                 "title": "Search iCloud Passwords",
-                "subtitle": "Type a site, app, URL, user name, or email",
+                "subtitle": "Keep typing a site, URL, or email",
                 "valid": False,
                 "arg": "",
             }
@@ -25,7 +26,14 @@ def _placeholder() -> str:
     )
 
 
-def _items_from_search(query: str) -> str:
+def _items(rows: list[dict[str, str]]) -> str:
+    items = [item_payload(entry) for entry in rows[:20]]
+    if not items:
+        return alfred_json([status_item("EMPTY", "Try another site, URL, or email")])
+    return alfred_json(items)
+
+
+def _items_from_passwords(query: str) -> str:
     try:
         raw = bridge_search(query)
     except BridgeError as err:
@@ -37,13 +45,11 @@ def _items_from_search(query: str) -> str:
         item = status_item(status)
         if status == "LOCKED":
             item["valid"] = False
-            item["subtitle"] = "Unlock Passwords if it appeared. Come back to Alfred and type the search again."
-        rerun = 0.8 if status in {"LOCKED", "NEED_AX"} else None
+            item["subtitle"] = "Unlock Passwords if it appeared, then type here again."
+        rerun = 0.5 if status in {"LOCKED", "NEED_AX"} else None
         return alfred_json([item], rerun=rerun)
-    items = [item_payload(entry) for entry in rows[:40]]
-    if not items:
-        return alfred_json([status_item("EMPTY", "Try another site, URL, or email")])
-    return alfred_json(items)
+    save(query, rows)
+    return _items(rows)
 
 
 def main(argv: list[str]) -> int:
@@ -52,7 +58,11 @@ def main(argv: list[str]) -> int:
     if not query:
         sys.stdout.write(_placeholder())
         return 0
-    sys.stdout.write(_items_from_search(query))
+    cached = local_hits(query)
+    if cached is not None:
+        sys.stdout.write(_items(cached))
+        return 0
+    sys.stdout.write(_items_from_passwords(query))
     return 0
 
 

@@ -40,7 +40,30 @@ def _run(args: list[str], timeout: int = TIMEOUT) -> str:
 
 
 def search(query: str) -> str:
-    return _run(["search", query])
+    env = os.environ.copy()
+    env.pop("HISTFILE", None)
+    binary = ROOT / "searchax"
+    argv = [str(binary), query] if binary.is_file() and os.access(binary, os.X_OK) else [
+        "/usr/bin/osascript",
+        "-l",
+        "JavaScript",
+        str(ROOT / "search_ui.js"),
+        query,
+    ]
+    completed = subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        timeout=4,
+        env=env,
+        check=False,
+    )
+    if completed.returncode != 0:
+        err = (completed.stdout or "") + (completed.stderr or "")
+        if "not allowed assistive access" in err or "-25211" in err:
+            raise BridgeError("NEED_AX", "Accessibility")
+        raise BridgeError("ERROR", "search failed")
+    return completed.stdout or ""
 
 
 def inspect_fields(app_name: str) -> str:

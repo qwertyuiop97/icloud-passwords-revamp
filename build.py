@@ -107,11 +107,11 @@ def workflow_plist() -> dict:
                     "argumenttype": 1,
                     "escaping": 0,
                     "keyword": "{var:keyword_search}",
-                    "queuedelaycustom": 3,
+                    "queuedelaycustom": 0.05,
                     "queuedelayimmediatelyinitially": True,
-                    "queuedelaymode": 1,
+                    "queuedelaymode": 2,
                     "queuemode": 2,
-                    "runningsubtext": "Searching Passwords…",
+                    "runningsubtext": "Searching…",
                     "script": '/usr/bin/python3 ./search.py "$1"\n',
                     "scriptargtype": 1,
                     "scriptfile": "",
@@ -161,6 +161,8 @@ WORKFLOW_FILES = (
     "search.py",
     "action.py",
     "ui.applescript",
+    "search_ui.js",
+    "searchax",
     "titles.py",
     "icon.png",
     "lib/__init__.py",
@@ -170,6 +172,7 @@ WORKFLOW_FILES = (
     "lib/bridge.py",
     "lib/inspect.py",
     "lib/tab.py",
+    "lib/cache.py",
 )
 
 

@@ -50,15 +50,15 @@
 				<key>keyword</key>
 				<string>{var:keyword_search}</string>
 				<key>queuedelaycustom</key>
-				<integer>3</integer>
+				<real>0.05</real>
 				<key>queuedelayimmediatelyinitially</key>
 				<true/>
 				<key>queuedelaymode</key>
-				<integer>1</integer>
+				<integer>2</integer>
 				<key>queuemode</key>
 				<integer>2</integer>
 				<key>runningsubtext</key>
-				<string>Searching Passwords…</string>
+				<string>Searching…</string>
 				<key>script</key>
 				<string>/usr/bin/python3 ./search.py "$1"
 </string>

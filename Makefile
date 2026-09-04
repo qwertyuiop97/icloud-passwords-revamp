@@ -17,7 +17,8 @@ check: test
 
 install: build
 	mkdir -p "$(INSTALL_DIR)/lib"
-	cp -f info.plist search.py action.py ui.applescript titles.py icon.png "$(INSTALL_DIR)/"
+	cp -f info.plist search.py action.py ui.applescript search_ui.js searchax titles.py icon.png "$(INSTALL_DIR)/"
+	chmod +x "$(INSTALL_DIR)/searchax" "$(INSTALL_DIR)/search_ui.js"
 	cp -f lib/*.py "$(INSTALL_DIR)/lib/"
 	chmod +x "$(INSTALL_DIR)/search.py" "$(INSTALL_DIR)/action.py" "$(INSTALL_DIR)/ui.applescript"
 
