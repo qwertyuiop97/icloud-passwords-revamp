@@ -63,6 +63,15 @@ def main(argv: list[str]) -> int:
         if isinstance(peeked, dict) and peeked.get("cmd") == "unlock":
             subprocess.run(["/usr/bin/open", "-a", "Passwords"], check=False)
             return 0
+        if isinstance(peeked, dict) and peeked.get("cmd") == "ax":
+            subprocess.run(
+                [
+                    "/usr/bin/open",
+                    "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+                ],
+                check=False,
+            )
+            return 0
     except Exception:
         pass
     try:

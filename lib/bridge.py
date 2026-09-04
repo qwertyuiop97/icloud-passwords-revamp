@@ -18,15 +18,19 @@ class BridgeError(RuntimeError):
         self.detail = detail
 
 
-def _run(args: list[str], timeout: int = TIMEOUT) -> str:
+def _env() -> dict[str, str]:
     env = os.environ.copy()
     env.pop("HISTFILE", None)
+    return env
+
+
+def _run(args: list[str], timeout: int = TIMEOUT) -> str:
     completed = subprocess.run(
         ["/usr/bin/osascript", str(UI_SCRIPT), *args],
         capture_output=True,
         text=True,
         timeout=timeout,
-        env=env,
+        env=_env(),
         check=False,
     )
     stdout = completed.stdout or ""
@@ -39,31 +43,66 @@ def _run(args: list[str], timeout: int = TIMEOUT) -> str:
     return stdout
 
 
-def search(query: str) -> str:
-    env = os.environ.copy()
-    env.pop("HISTFILE", None)
-    binary = ROOT / "searchax"
-    argv = [str(binary), query] if binary.is_file() and os.access(binary, os.X_OK) else [
-        "/usr/bin/osascript",
-        "-l",
-        "JavaScript",
-        str(ROOT / "search_ui.js"),
-        query,
-    ]
-    completed = subprocess.run(
-        argv,
-        capture_output=True,
-        text=True,
-        timeout=4,
-        env=env,
-        check=False,
-    )
+def _first_token(raw: str) -> str:
+    for line in raw.splitlines():
+        token = line.strip()
+        if token:
+            return token
+    return ""
+
+
+def _search_cmd(cmd: list[str], timeout: float) -> str:
+    try:
+        completed = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=_env(),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "LOCKED\n"
+    stdout = completed.stdout or ""
+    stderr = completed.stderr or ""
     if completed.returncode != 0:
-        err = (completed.stdout or "") + (completed.stderr or "")
-        if "not allowed assistive access" in err or "-25211" in err:
-            raise BridgeError("NEED_AX", "Accessibility")
-        raise BridgeError("ERROR", "search failed")
-    return completed.stdout or ""
+        combined = (stdout + "\n" + stderr).strip()
+        if "not allowed assistive access" in combined or "-25211" in combined:
+            return "NEED_AX\n"
+        if _first_token(stdout) in {"OK", "EMPTY", "LOCKED", "NEED_AX", "NO_APP"}:
+            return stdout
+        return ""
+    return stdout
+
+
+def search(query: str) -> str:
+    binary = ROOT / "searchax"
+    js = ROOT / "search_ui.js"
+    last = ""
+    if binary.is_file() and os.access(binary, os.X_OK):
+        last = _search_cmd([str(binary), query], 2.2)
+        if _first_token(last) == "OK":
+            return last
+    js_raw = _search_cmd(
+        ["/usr/bin/osascript", "-l", "JavaScript", str(js), query],
+        5,
+    )
+    token = _first_token(js_raw)
+    if token == "OK" or token == "EMPTY":
+        return js_raw
+    if token:
+        last = js_raw
+    try:
+        as_raw = _run(["search", query], timeout=8)
+    except subprocess.TimeoutExpired:
+        as_raw = ""
+    except BridgeError as err:
+        if last:
+            return last
+        raise err
+    if _first_token(as_raw) == "OK" or _first_token(as_raw):
+        return as_raw
+    return last or "ERROR\n"
 
 
 def inspect_fields(app_name: str) -> str:

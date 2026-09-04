@@ -34,6 +34,23 @@ on refocusAlfred()
 	end tell
 end refocusAlfred
 
+on windowShowsLock()
+	tell application "System Events"
+		tell process "Passwords"
+			if not (exists window 1) then return false
+			tell window 1
+				try
+					if exists static text "Passwords Is Locked" of group 1 of group 2 then return true
+				end try
+				try
+					if exists static text "Passwords Is Locked" of group 1 of group 1 of group 2 then return true
+				end try
+			end tell
+		end tell
+	end tell
+	return false
+end windowShowsLock
+
 on clickUnlock()
 	tell application "System Events"
 		tell process "Passwords"
@@ -46,6 +63,31 @@ on clickUnlock()
 					end if
 				end try
 			end tell
+			if my windowShowsLock() then
+				tell window 1
+					repeat with b in buttons
+						try
+							set sr to ""
+							try
+								set sr to subrole of b as string
+							end try
+							if sr does not contain "Close" and sr does not contain "FullScreen" and sr does not contain "Minimize" and sr does not contain "Zoom" then
+								click b
+								return true
+							end if
+						end try
+					end repeat
+					-- SwiftUI lock button lives in the second hosting group.
+					try
+						click button 1 of group 1 of group 2
+						return true
+					end try
+					try
+						perform action "AXPress" of button 1 of group 1 of group 2
+						return true
+					end try
+				end tell
+			end if
 		end tell
 	end tell
 	return false
@@ -84,9 +126,35 @@ on findSearchField()
 	tell application "System Events"
 		tell process "Passwords"
 			if not (exists window 1) then return missing value
-			try
-				return text field 1 of group 2 of toolbar 1 of window 1
-			end try
+			tell window 1
+				try
+					if exists toolbar 1 then
+						try
+							return text field 1 of group 2 of toolbar 1
+						end try
+						try
+							return text field 1 of toolbar 1
+						end try
+					end if
+				end try
+				try
+					set n to count of groups
+					repeat with i from 1 to n
+						try
+							tell group i
+								if (count of outlines) is 0 then
+									try
+										if exists text field 1 then return text field 1
+									end try
+								end if
+							end tell
+						end try
+					end repeat
+				end try
+				try
+					if exists text field 1 then return text field 1
+				end try
+			end tell
 		end tell
 	end tell
 	return missing value
@@ -134,26 +202,51 @@ on setSearch(theQuery)
 	return true
 end setSearch
 
-on collectRows()
-	set collected to {}
+on listOutline()
 	tell application "System Events"
 		tell process "Passwords"
-			tell outline 1 of scroll area 1 of group 2 of splitter group 1 of group 1 of window 1
-				set n to count of rows
-				if n > 40 then set n to 40
-				repeat with i from 1 to n
-					try
-						tell UI element 1 of row i
-							set siteName to (get value of static text 1) as string
-							set userName to ""
-							try
-								set userName to (get value of static text 2) as string
-							end try
-							if siteName is not "" then set end of collected to siteName & tab & userName
-						end tell
-					end try
-				end repeat
+			tell window 1
+				try
+					return outline 1 of scroll area 1 of group 2 of splitter group 1 of group 1
+				end try
+				try
+					return outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1
+				end try
+				try
+					tell splitter group 1 of group 1
+						set gs to groups
+						set gi to count of gs
+						if gi ≥ 2 then
+							return outline 1 of scroll area 1 of item gi of gs
+						end if
+					end tell
+				end try
 			end tell
+		end tell
+	end tell
+	return missing value
+end listOutline
+
+on collectRows()
+	set collected to {}
+	set ol to listOutline()
+	if ol is missing value then return collected
+	tell application "System Events"
+		tell ol
+			set n to count of rows
+			if n > 40 then set n to 40
+			repeat with i from 1 to n
+				try
+					tell UI element 1 of row i
+						set siteName to (get value of static text 1) as string
+						set userName to ""
+						try
+							set userName to (get value of static text 2) as string
+						end try
+						if siteName is not "" then set end of collected to siteName & tab & userName
+					end tell
+				end try
+			end repeat
 		end tell
 	end tell
 	return collected
@@ -336,10 +429,21 @@ on run argv
 		end try
 		launchPasswordsHidden()
 		try
-			with timeout of 4 seconds
+			with timeout of 6 seconds
 				if findSearchField() is missing value then
 					raisePasswordsForAX()
 					delay 0.2
+				end if
+				if my windowShowsLock() then
+					clickUnlock()
+					my refocusAlfred()
+					return "LOCKED"
+				end if
+				if findSearchField() is missing value then
+					raisePasswordsForAX()
+					delay 0.15
+					tell application "System Events" to keystroke "f" using command down
+					delay 0.15
 				end if
 				if findSearchField() is missing value then
 					-- First-run unlock. Leave Passwords visible for Touch ID.
@@ -352,7 +456,6 @@ on run argv
 			my refocusAlfred()
 			return "LOCKED"
 		end try
-		hidePasswords()
 		my refocusAlfred()
 		if (count of rows) is 0 then return "EMPTY"
 		set out to "OK" & linefeed

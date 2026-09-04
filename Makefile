@@ -1,7 +1,11 @@
-.PHONY: build install uninstall check test
+.PHONY: build install uninstall check test searchax
 
 ALFRED_WORKFLOWS := $(HOME)/Library/Application Support/Alfred/Alfred.alfredpreferences/workflows
 INSTALL_DIR := $(ALFRED_WORKFLOWS)/user.workflow.icloud-passwords-revamp
+
+searchax: SearchAX.swift
+	swiftc -O -o searchax SearchAX.swift -framework AppKit -framework ApplicationServices
+	codesign --force --sign - --identifier com.qwertyuiop97.icloud-passwords-revamp.searchax searchax
 
 build:
 	python3 build.py
@@ -15,7 +19,7 @@ check: test
 	osacompile -o /tmp/icloud-passwords-revamp-check.scpt ui.applescript
 	rm -f /tmp/icloud-passwords-revamp-check.scpt
 
-install: build
+install: searchax build
 	mkdir -p "$(INSTALL_DIR)/lib"
 	cp -f info.plist search.py action.py ui.applescript search_ui.js searchax titles.py icon.png "$(INSTALL_DIR)/"
 	chmod +x "$(INSTALL_DIR)/searchax" "$(INSTALL_DIR)/search_ui.js"

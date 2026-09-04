@@ -17,8 +17,8 @@ def _placeholder() -> str:
     return alfred_json(
         [
             {
-                "title": "Search iCloud Passwords",
-                "subtitle": "Keep typing a site, URL, or email",
+                "title": "Type a site, URL, or email",
+                "subtitle": "Example: pw arizona",
                 "valid": False,
                 "arg": "",
             }
@@ -44,8 +44,13 @@ def _items_from_passwords(query: str) -> str:
     if status != "OK":
         item = status_item(status)
         if status == "LOCKED":
-            item["valid"] = False
-            item["subtitle"] = "Unlock Passwords if it appeared, then type here again."
+            item["valid"] = True
+            item["arg"] = __import__("json").dumps({"cmd": "unlock"})
+            item["subtitle"] = "Return opens Passwords for Touch ID. Results appear here after unlock."
+        if status == "NEED_AX":
+            item["valid"] = True
+            item["arg"] = __import__("json").dumps({"cmd": "ax"})
+            item["subtitle"] = "Return opens Accessibility. Enable Alfred and searchax, then type again."
         rerun = 0.5 if status in {"LOCKED", "NEED_AX"} else None
         return alfred_json([item], rerun=rerun)
     save(query, rows)
