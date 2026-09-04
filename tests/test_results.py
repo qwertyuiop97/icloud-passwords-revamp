@@ -21,6 +21,14 @@ GITHUB = {"title": "GitHub", "username": "alice@example.com", "url": "https://gi
 
 
 class ResultTests(unittest.TestCase):
+    def test_locked_status_keeps_alfred_open(self):
+        from lib.results import status_item
+
+        item = status_item("LOCKED")
+        self.assertFalse(item["valid"])
+        self.assertIn("Leave this window open", item["subtitle"])
+        self.assertEqual(item["rerun"], 0.8)
+
     def test_empty_query_does_not_list_vault(self):
         items = filter_items("", [ARIZONA_A, ARIZONA_B, GITHUB])
         self.assertEqual(len(items), 1)

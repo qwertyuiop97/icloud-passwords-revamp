@@ -1,80 +1,82 @@
 #!/usr/bin/env python3
-"""Draw README screenshots. Fake example.edu accounts only."""
+"""README screenshots. Example.edu accounts only."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 OUT = Path(__file__).resolve().parent
+ICON = Path(__file__).resolve().parent.parent / "icon.png"
 FONT = "/System/Library/Fonts/SFNS.ttf"
-FONT_I = "/System/Library/Fonts/SFNSItalic.ttf"
 SCALE = 2
 
+BG = (236, 236, 238, 255)
+PANEL = (28, 28, 30, 255)
+LINE = (58, 58, 62, 255)
+SELECT = (10, 132, 255, 255)
+TITLE = (245, 245, 247, 255)
+SUB = (174, 174, 178, 255)
+FOOT = (142, 142, 147, 255)
+QUERY = (255, 255, 255, 255)
 
-def font(size: int, italic: bool = False) -> ImageFont.FreeTypeFont:
-    path = FONT_I if italic else FONT
+
+def font(size: int) -> ImageFont.FreeTypeFont:
     try:
-        return ImageFont.truetype(path, size * SCALE)
+        return ImageFont.truetype(FONT, size * SCALE)
     except OSError:
         return ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", size * SCALE)
 
 
-def rounded(draw: ImageDraw.ImageDraw, box, radius, fill):
-    draw.rounded_rectangle(box, radius=radius * SCALE, fill=fill)
+def load_icon(size: int) -> Image.Image:
+    icon = Image.open(ICON).convert("RGBA")
+    return icon.resize((size, size), Image.Resampling.LANCZOS)
 
 
 def draw_window(rows, query: str, selected: int, footer: str, name: str) -> None:
-    pad = 48 * SCALE
-    width = 740 * SCALE
-    row_h = 56 * SCALE
-    header = 64 * SCALE
-    footer_h = 36 * SCALE
+    s = SCALE
+    pad = 56 * s
+    width = 720 * s
+    row_h = 58 * s
+    header = 62 * s
+    footer_h = 40 * s
     height = header + row_h * len(rows) + footer_h + pad * 2
-    img = Image.new("RGBA", (width + pad * 2, height), (232, 232, 234, 255))
-    d = ImageDraw.Draw(img)
-    panel = (pad, pad, pad + width, pad + header + row_h * len(rows) + footer_h)
-    # shadow
-    shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    canvas = Image.new("RGBA", (width + pad * 2, height), BG)
+    shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     sd = ImageDraw.Draw(shadow)
+    panel = (pad, pad, pad + width, pad + header + row_h * len(rows) + footer_h)
     sd.rounded_rectangle(
-        (panel[0] + 8, panel[1] + 12, panel[2] + 8, panel[3] + 12),
-        radius=18 * SCALE,
-        fill=(0, 0, 0, 40),
+        (panel[0] + 6, panel[1] + 10, panel[2] + 6, panel[3] + 14),
+        radius=16 * s,
+        fill=(0, 0, 0, 55),
     )
-    img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(12)))
-    d = ImageDraw.Draw(img)
-    rounded(d, panel, 18, (36, 36, 38, 255))
-    # query
-    qfont = font(22)
-    d.text((pad + 28 * SCALE, pad + 18 * SCALE), query, font=qfont, fill=(245, 245, 247, 255))
-    d.line(
-        [(pad + 20 * SCALE, pad + header - 2), (pad + width - 20 * SCALE, pad + header - 2)],
-        fill=(70, 70, 74, 255),
-        width=SCALE,
-    )
-    title_f = font(17)
-    sub_f = font(13)
+    canvas = Image.alpha_composite(canvas, shadow.filter(ImageFilter.GaussianBlur(18)))
+    d = ImageDraw.Draw(canvas)
+    d.rounded_rectangle(panel, radius=16 * s, fill=PANEL)
+    d.text((pad + 24 * s, pad + 16 * s), query, font=font(22), fill=QUERY)
+    yline = pad + header - 4 * s
+    d.line([(pad + 16 * s, yline), (pad + width - 16 * s, yline)], fill=LINE, width=s)
+    icon = load_icon(36 * s)
     for i, (title, sub) in enumerate(rows):
         y = pad + header + i * row_h
         if i == selected:
-            d.rectangle(
-                (pad + 8 * SCALE, y + 4 * SCALE, pad + width - 8 * SCALE, y + row_h - 4 * SCALE),
-                fill=(52, 120, 246, 255),
+            d.rounded_rectangle(
+                (pad + 10 * s, y + 5 * s, pad + width - 10 * s, y + row_h - 5 * s),
+                radius=8 * s,
+                fill=SELECT,
             )
-            tfill, sfill = (255, 255, 255, 255), (220, 230, 255, 255)
+            tfill, sfill = (255, 255, 255, 255), (220, 235, 255, 255)
         else:
-            tfill, sfill = (236, 236, 238, 255), (160, 160, 165, 255)
-        cx, cy = pad + 36 * SCALE, y + row_h // 2
-        r = 13 * SCALE
-        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=tfill)
-        d.text((pad + 64 * SCALE, y + 8 * SCALE), title, font=title_f, fill=tfill)
-        d.text((pad + 64 * SCALE, y + 30 * SCALE), sub, font=sub_f, fill=sfill)
+            tfill, sfill = TITLE, SUB
+        ix, iy = pad + 22 * s, y + (row_h - 36 * s) // 2
+        canvas.paste(icon, (ix, iy), icon)
+        d = ImageDraw.Draw(canvas)
+        d.text((pad + 70 * s, y + 10 * s), title, font=font(17), fill=tfill)
+        d.text((pad + 70 * s, y + 32 * s), sub, font=font(13), fill=sfill)
     fy = pad + header + row_h * len(rows)
-    d.text((pad + 24 * SCALE, fy + 8 * SCALE), footer, font=font(12), fill=(150, 150, 155, 255))
-    img = img.convert("RGB")
-    img.save(OUT / name, "PNG", optimize=True)
+    d.text((pad + 24 * s, fy + 10 * s), footer, font=font(12), fill=FOOT)
+    canvas.convert("RGB").save(OUT / name, "PNG", optimize=True)
 
 
 def main() -> int:
@@ -86,7 +88,7 @@ def main() -> int:
         ],
         "pw arizona",
         0,
-        "↩ Fill login    ⌘ Copy password    ⌥ OTP    ⌃ User name",
+        "return  Fill login      cmd  Password      opt  OTP      ctrl  User name",
         "search.png",
     )
     draw_window(
@@ -96,11 +98,9 @@ def main() -> int:
         ],
         "pw",
         0,
-        "Suggested from the frontmost browser tab",
+        "Suggested from the front browser tab",
         "current-tab.png",
     )
-    print(OUT / "search.png")
-    print(OUT / "current-tab.png")
     return 0
 
 

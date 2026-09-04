@@ -43,14 +43,48 @@ on passwordsInstalled()
 	return (do shell script "[ -d /System/Applications/Passwords.app ] && echo 1 || echo 0") is "1"
 end passwordsInstalled
 
+on refocusAlfred()
+	tell application "System Events"
+		repeat with n in my alfredNames()
+			try
+				if exists process (n as string) then
+					set frontmost of process (n as string) to true
+					return
+				end if
+			end try
+		end repeat
+	end tell
+end refocusAlfred
+
+on clickUnlock()
+	tell application "System Events"
+		tell process "Passwords"
+			if not (exists window 1) then return false
+			tell window 1
+				try
+					if exists button "Unlock" then
+						click button "Unlock"
+						return true
+					end if
+				end try
+			end tell
+		end tell
+	end tell
+	return false
+end clickUnlock
+
 on launchPasswordsHidden()
 	tell application "Passwords" to launch
 	tell application "System Events"
 		repeat 40 times
-			if exists process "Passwords" then return
+			if exists process "Passwords" then exit repeat
 			delay 0.1
 		end repeat
+		try
+			tell process "Passwords" to set frontmost to false
+		end try
 	end tell
+	my refocusAlfred()
 end launchPasswordsHidden
 
 on findSearchField()
@@ -103,14 +137,14 @@ on setSearch(theQuery)
 	if sf is missing value then return false
 	tell application "System Events"
 		tell process "Passwords"
+			-- Do not keystroke. That would type into Alfred if it is frontmost.
 			try
-				set focused of sf to true
+				set value of attribute "AXFocused" of sf to true
 			end try
 			set value of sf to theQuery
-			delay 0.05
-			key code 49
-			delay 0.04
-			key code 51
+			try
+				perform action "AXConfirm" of sf
+			end try
 		end tell
 	end tell
 	delay 0.35
@@ -378,9 +412,13 @@ on run argv
 			return "NEED_AX"
 		end try
 		launchPasswordsHidden()
+		clickUnlock()
+		my refocusAlfred()
 		if findSearchField() is missing value then return "LOCKED"
 		if not setSearch(q) then return "LOCKED"
+		my refocusAlfred()
 		set rows to collectRows()
+		my refocusAlfred()
 		if (count of rows) is 0 then return "EMPTY"
 		set out to "OK" & linefeed
 		set n to 0

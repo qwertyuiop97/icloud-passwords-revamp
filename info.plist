@@ -116,6 +116,8 @@ Alfred workflow for Apple’s Passwords app.
 
 Type `pw` then a site, URL, or email. Results appear under the query (email first, site as the subtitle). Return fills the frontmost login form: user name, then password. A password is never pasted into a user name / NetID / email field.
 
+Unlock with Touch ID when Passwords is locked. Leave Alfred open; results refresh after you authenticate. Passwords stays running so you are not asked again until it quits.
+
 Requires Alfred 5 with Powerpack, macOS Sequoia or later, and Accessibility for Alfred.
 
 https://github.com/qwertyuiop97/icloud-passwords-revamp
@@ -202,14 +204,14 @@ https://github.com/qwertyuiop97/icloud-passwords-revamp
 			<key>config</key>
 			<dict>
 				<key>default</key>
-				<true/>
+				<false/>
 				<key>required</key>
 				<false/>
 				<key>text</key>
-				<string>Quit Passwords after filling or copying</string>
+				<string>Quit Passwords after filling (you'll unlock again next time)</string>
 			</dict>
 			<key>description</key>
-			<string>Passwords stays in the background while you search in Alfred.</string>
+			<string>Leave this off to match the Firefox extension: unlock once, then reuse the session until Passwords quits.</string>
 			<key>label</key>
 			<string>Close after fill</string>
 			<key>type</key>
@@ -227,12 +229,12 @@ https://github.com/qwertyuiop97/icloud-passwords-revamp
 		<key>fill_both</key>
 		<string>1</string>
 		<key>close_after_copy</key>
-		<string>1</string>
+		<string>0</string>
 	</dict>
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>3.0.0</string>
+	<string>3.1.0</string>
 	<key>webaddress</key>
 	<string>https://github.com/qwertyuiop97/icloud-passwords-revamp</string>
 </dict>

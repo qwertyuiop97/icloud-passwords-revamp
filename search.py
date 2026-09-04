@@ -36,7 +36,7 @@ def _items_from_search(query: str, *, tab_hint: bool = False) -> str:
         return alfred_json([status_item("ERROR")])
     status, rows = parse_search_output(raw)
     if status != "OK":
-        rerun = 1.5 if status in {"LOCKED", "NEED_AX"} else None
+        rerun = 0.8 if status in {"LOCKED", "NEED_AX"} else None
         return alfred_json([status_item(status)], rerun=rerun)
     if tab_hint:
         for row in rows:

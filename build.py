@@ -62,11 +62,11 @@ def user_config() -> list[dict]:
         },
         {
             "config": {
-                "default": True,
+                "default": False,
                 "required": False,
-                "text": "Quit Passwords after filling or copying",
+                "text": "Quit Passwords after filling (you'll unlock again next time)",
             },
-            "description": "Passwords stays in the background while you search in Alfred.",
+            "description": "Leave this off to match the Firefox extension: unlock once, then reuse the session until Passwords quits.",
             "label": "Close after fill",
             "type": "checkbox",
             "variable": "close_after_copy",
@@ -79,6 +79,8 @@ README = """# iCloud Passwords Revamp
 Alfred workflow for Apple’s Passwords app.
 
 Type `pw` then a site, URL, or email. Results appear under the query (email first, site as the subtitle). Return fills the frontmost login form: user name, then password. A password is never pasted into a user name / NetID / email field.
+
+Unlock with Touch ID when Passwords is locked. Leave Alfred open; results refresh after you authenticate. Passwords stays running so you are not asked again until it quits.
 
 Requires Alfred 5 with Powerpack, macOS Sequoia or later, and Accessibility for Alfred.
 
@@ -158,10 +160,10 @@ def workflow_plist() -> dict:
             "keyword_search": "pw",
             "suggest_tab": "1",
             "fill_both": "1",
-            "close_after_copy": "1",
+            "close_after_copy": "0",
         },
         "variablesdontexport": [],
-        "version": "3.0.0",
+        "version": "3.1.0",
         "webaddress": REPO_URL,
     }
 

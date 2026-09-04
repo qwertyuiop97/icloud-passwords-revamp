@@ -22,9 +22,13 @@ SIDEBAR_TITLES = {
 STATUS_TITLES = {
     "NO_APP": "Install the Passwords app (macOS Sequoia or later)",
     "NEED_AX": "Enable Accessibility for Alfred, then search again",
-    "LOCKED": "Unlock Passwords with Touch ID, then search again",
+    "LOCKED": "Unlock Passwords with Touch ID",
     "EMPTY": "No matching logins",
     "ERROR": "Could not search Passwords",
+}
+STATUS_SUB = {
+    "LOCKED": "Leave this window open. Results appear after you authenticate.",
+    "NEED_AX": "System Settings → Privacy & Security → Accessibility → Alfred",
 }
 
 
@@ -122,12 +126,12 @@ def status_item(status: str, detail: str = "") -> dict[str, Any]:
     title = STATUS_TITLES.get(status, STATUS_TITLES["ERROR"])
     item: dict[str, Any] = {
         "title": title,
-        "subtitle": detail,
+        "subtitle": detail or STATUS_SUB.get(status, ""),
         "valid": False,
         "arg": "",
     }
     if status in {"LOCKED", "NEED_AX"}:
-        item["rerun"] = 1.5
+        item["rerun"] = 0.8
     return item
 
 

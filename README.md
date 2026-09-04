@@ -48,6 +48,22 @@ Open the workflow in Alfred and click Configure Workflow:
 | Fill user name and password together on login forms | on |
 | Quit Passwords after filling or copying | on |
 
+## Unlocking (Touch ID)
+
+This is not the Firefox iCloud Passwords extension. Firefox talks to Apple's `PasswordManagerBrowserExtensionHelper` and asks for a 6-digit code once per browser process. After that, the helper stays authorized until Firefox quits.
+
+This Alfred workflow talks to the Passwords app instead (there is no public keychain API for third-party apps). Authorization is whatever Passwords already uses: Touch ID or your Mac password, when the vault is locked.
+
+| When | What you do |
+| --- | --- |
+| First search after Passwords was quit or the Mac locked the vault | Touch ID (or password). **Leave Alfred open.** The result list says "Unlock Passwords with Touch ID" and refreshes on its own. |
+| Later searches in the same session | Nothing. Passwords stays running in the background. |
+| After you log out, restart, or quit Passwords | Touch ID again, same as opening the Passwords app |
+
+Configure Workflow has **Close after fill** off by default so Passwords is not quit after every login (that would force Touch ID every time). Turn it on only if you want the vault locked again immediately.
+
+Filling a password can still show Touch ID if macOS requires it for revealing a secret. That prompt is a system sheet. Alfred has already closed at that point because you pressed return.
+
 ## How it works
 
 Alfred does not get a public API for iCloud Keychain, so the workflow drives the Passwords app through Accessibility.
