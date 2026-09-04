@@ -43,13 +43,6 @@ def search(query: str) -> str:
     return _run(["search", query])
 
 
-def tab_url() -> str:
-    try:
-        return _run(["taburl"], timeout=8).strip()
-    except BridgeError:
-        return ""
-
-
 def inspect_fields(app_name: str) -> str:
     return _run(["inspect", app_name])
 

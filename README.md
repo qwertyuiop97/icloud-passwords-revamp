@@ -21,12 +21,9 @@ Requires Alfred 5 with the Powerpack, and macOS Sequoia or later.
 
 Type `pw` in Alfred, then a site, app name, URL, user name, or email.
 
-![Current tab suggestions](docs/current-tab.png)
-
 | Input | What happens |
 | --- | --- |
-| `pw` | Suggests logins for the current browser tab when it can read the URL |
-| `pw arizona` | Lists every matching login (every email for that site) |
+| `pw arizona` | Lists matching logins under the query |
 | ↩ | Fills user name, then password |
 | ⌘↩ | Copies the password |
 | ⌥↩ | Copies the verification code |
@@ -44,25 +41,16 @@ Open the workflow in Alfred and click Configure Workflow:
 | Setting | Default |
 | --- | --- |
 | Search keyword | `pw` |
-| Suggest logins for the current browser tab | on |
 | Fill user name and password together on login forms | on |
-| Quit Passwords after filling or copying | on |
+| Quit Passwords after filling or copying | off |
 
-## Unlocking (Touch ID)
+## Unlocking
 
-This is not the Firefox iCloud Passwords extension. Firefox talks to Apple's `PasswordManagerBrowserExtensionHelper` and asks for a 6-digit code once per browser process. After that, the helper stays authorized until Firefox quits.
+There is no public API for iCloud Keychain, so the workflow uses the Passwords app in the background.
 
-This Alfred workflow talks to the Passwords app instead (there is no public keychain API for third-party apps). Authorization is whatever Passwords already uses: Touch ID or your Mac password, when the vault is locked.
+The first time the vault is locked, Passwords may come forward for Touch ID. After that, leave it running. Later `pw` searches should stay in Alfred and should not ask again until Passwords quits or the Mac locks the vault.
 
-| When | What you do |
-| --- | --- |
-| First search after Passwords was quit or the Mac locked the vault | Touch ID (or password). **Leave Alfred open.** The result list says "Unlock Passwords with Touch ID" and refreshes on its own. |
-| Later searches in the same session | Nothing. Passwords stays running in the background. |
-| After you log out, restart, or quit Passwords | Touch ID again, same as opening the Passwords app |
-
-Configure Workflow has **Close after fill** off by default so Passwords is not quit after every login (that would force Touch ID every time). Turn it on only if you want the vault locked again immediately.
-
-Filling a password can still show Touch ID if macOS requires it for revealing a secret. That prompt is a system sheet. Alfred has already closed at that point because you pressed return.
+Do not turn on **Close after fill** unless you want to unlock every time.
 
 ## How it works
 

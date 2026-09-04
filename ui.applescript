@@ -2,28 +2,6 @@
 -- UI bridge for the iCloud Passwords Revamp Alfred workflow.
 -- Never print a password, OTP, or field value.
 
-on browserTabURL()
-	if application "Safari" is running then
-		try
-			tell application "Safari"
-				if (count of windows) > 0 then
-					set theURL to URL of current tab of front window
-					if theURL is not missing value and theURL as string is not "" then return theURL as string
-				end if
-			end tell
-		end try
-	end if
-	repeat with browserName in {"Google Chrome", "Brave Browser", "Microsoft Edge", "Arc", "Vivaldi", "Chromium", "Dia"}
-		try
-			if application (browserName as string) is running then
-				set chromeURL to run script "tell application \"" & (browserName as string) & "\" to get URL of active tab of front window"
-				if chromeURL is not missing value and chromeURL as string is not "" then return chromeURL as string
-			end if
-		end try
-	end repeat
-	return ""
-end browserTabURL
-
 on alfredNames()
 	return {"Alfred", "Alfred 5", "Alfred 4", "Alfred Preferences"}
 end alfredNames
@@ -74,18 +52,33 @@ on clickUnlock()
 end clickUnlock
 
 on launchPasswordsHidden()
-	tell application "Passwords" to launch
+	do shell script "/usr/bin/open -g -a Passwords"
 	tell application "System Events"
 		repeat 40 times
 			if exists process "Passwords" then exit repeat
 			delay 0.1
 		end repeat
+	end tell
+end launchPasswordsHidden
+
+on hidePasswords()
+	tell application "System Events"
 		try
-			tell process "Passwords" to set frontmost to false
+			set visible of process "Passwords" to false
 		end try
 	end tell
-	my refocusAlfred()
-end launchPasswordsHidden
+end hidePasswords
+
+on raisePasswordsForAX()
+	tell application "System Events"
+		tell process "Passwords"
+			try
+				set visible to true
+			end try
+			set frontmost to true
+		end tell
+	end tell
+end raisePasswordsForAX
 
 on findSearchField()
 	tell application "System Events"
@@ -329,10 +322,6 @@ on run argv
 	if (count of argv) < 1 then error "usage: mode ..."
 	set mode to item 1 of argv
 	
-	if mode is "taburl" then
-		return browserTabURL()
-	end if
-	
 	if mode is "search" then
 		if not passwordsInstalled() then
 			return "NO_APP"
@@ -346,12 +335,24 @@ on run argv
 			return "NEED_AX"
 		end try
 		launchPasswordsHidden()
-		tell application "System Events" to tell process "Passwords" to set frontmost to true
-		delay 0.25
-		clickUnlock()
-		if findSearchField() is missing value then return "LOCKED"
-		if not setSearch(q) then return "LOCKED"
-		set rows to collectRows()
+		try
+			with timeout of 4 seconds
+				if findSearchField() is missing value then
+					raisePasswordsForAX()
+					delay 0.2
+				end if
+				if findSearchField() is missing value then
+					-- First-run unlock. Leave Passwords visible for Touch ID.
+					return "LOCKED"
+				end if
+				if not setSearch(q) then return "LOCKED"
+				set rows to collectRows()
+			end timeout
+		on error
+			my refocusAlfred()
+			return "LOCKED"
+		end try
+		hidePasswords()
 		my refocusAlfred()
 		if (count of rows) is 0 then return "EMPTY"
 		set out to "OK" & linefeed

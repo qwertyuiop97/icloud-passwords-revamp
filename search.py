@@ -3,16 +3,13 @@
 
 from __future__ import annotations
 
-import json
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from lib.bridge import BridgeError, search as bridge_search, tab_url
+from lib.bridge import BridgeError, search as bridge_search
 from lib.results import alfred_json, item_payload, parse_search_output, status_item
-from lib.tab import search_query_from_url
 
 
 def _placeholder() -> str:
@@ -28,7 +25,7 @@ def _placeholder() -> str:
     )
 
 
-def _items_from_search(query: str, *, tab_hint: bool = False) -> str:
+def _items_from_search(query: str) -> str:
     try:
         raw = bridge_search(query)
     except BridgeError as err:
@@ -39,14 +36,10 @@ def _items_from_search(query: str, *, tab_hint: bool = False) -> str:
     if status != "OK":
         item = status_item(status)
         if status == "LOCKED":
-            item["valid"] = True
-            item["arg"] = json.dumps({"cmd": "unlock"})
-            item["subtitle"] = "Return opens Passwords. Stay in Alfred if Touch ID already appeared."
+            item["valid"] = False
+            item["subtitle"] = "Unlock Passwords if it appeared. Come back to Alfred and type the search again."
         rerun = 0.8 if status in {"LOCKED", "NEED_AX"} else None
         return alfred_json([item], rerun=rerun)
-    if tab_hint:
-        for row in rows:
-            row["source"] = "tab"
     items = [item_payload(entry) for entry in rows[:40]]
     if not items:
         return alfred_json([status_item("EMPTY", "Try another site, URL, or email")])
@@ -57,12 +50,6 @@ def main(argv: list[str]) -> int:
     query = argv[1] if len(argv) > 1 else ""
     query = query.strip()
     if not query:
-        suggest = (os.environ.get("suggest_tab") or "1") == "1"
-        if suggest:
-            host_q = search_query_from_url(tab_url())
-            if host_q:
-                sys.stdout.write(_items_from_search(host_q, tab_hint=True))
-                return 0
         sys.stdout.write(_placeholder())
         return 0
     sys.stdout.write(_items_from_search(query))

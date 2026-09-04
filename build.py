@@ -42,17 +42,6 @@ def user_config() -> list[dict]:
             "config": {
                 "default": True,
                 "required": False,
-                "text": "When the keyword is used alone, suggest logins for the current browser tab",
-            },
-            "description": "Uses the tab’s host (for example arizona.edu) as the first search.",
-            "label": "Current tab",
-            "type": "checkbox",
-            "variable": "suggest_tab",
-        },
-        {
-            "config": {
-                "default": True,
-                "required": False,
                 "text": "On a login form, fill user name and password together",
             },
             "description": "Never pastes a password into a user name / NetID / email field.",
@@ -66,7 +55,7 @@ def user_config() -> list[dict]:
                 "required": False,
                 "text": "Quit Passwords after filling (you'll unlock again next time)",
             },
-            "description": "Leave this off to match the Firefox extension: unlock once, then reuse the session until Passwords quits.",
+            "description": "Leave this off so you only unlock once, then keep using Alfred.",
             "label": "Close after fill",
             "type": "checkbox",
             "variable": "close_after_copy",
@@ -80,7 +69,7 @@ Alfred workflow for Apple’s Passwords app.
 
 Type `pw` then a site, URL, or email. Results appear under the query (email first, site as the subtitle). Return fills the frontmost login form: user name, then password. A password is never pasted into a user name / NetID / email field.
 
-Unlock with Touch ID when Passwords is locked. Leave Alfred open; results refresh after you authenticate. Passwords stays running so you are not asked again until it quits.
+The first search may ask you to unlock Passwords. After that, keep typing in Alfred.
 
 Requires Alfred 5 with Powerpack, macOS Sequoia or later, and Accessibility for Alfred.
 
@@ -158,7 +147,6 @@ def workflow_plist() -> dict:
         "userconfigurationconfig": user_config(),
         "variables": {
             "keyword_search": "pw",
-            "suggest_tab": "1",
             "fill_both": "1",
             "close_after_copy": "0",
         },
