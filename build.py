@@ -173,6 +173,8 @@ WORKFLOW_FILES = (
     "lib/inspect.py",
     "lib/tab.py",
     "lib/cache.py",
+    "lib/context.py",
+    "lib/session.py",
 )
 
 

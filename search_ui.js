@@ -119,6 +119,16 @@ function passwordsProc(se) {
   }
 }
 
+function passwordsInstalled() {
+  const app = Application.currentApplication();
+  app.includeStandardAdditions = true;
+  try {
+    return app.doShellScript("[ -d /System/Applications/Passwords.app ] && echo 1 || echo 0") === "1";
+  } catch (e) {
+    return true;
+  }
+}
+
 function findLiveSearch(proc) {
   let windows = [];
   try {
@@ -168,12 +178,12 @@ function run(argv) {
   const se = Application("System Events");
   const proc = passwordsProc(se);
   if (argv.length && String(argv[0]) === "--state") {
-    if (!proc) return "LOCKED";
+    if (!proc) return passwordsInstalled() ? "NOT_RUNNING" : "NO_APP";
     return findLiveSearch(proc) ? "UNLOCKED" : "LOCKED";
   }
   const query = argv.length ? String(argv[0]) : "";
   if (!query) return "EMPTY";
-  if (!proc) return "LOCKED";
+  if (!proc) return passwordsInstalled() ? "NOT_RUNNING" : "NO_APP";
   const live = findLiveSearch(proc);
   if (!live) return "LOCKED";
   live.sf.value = query;

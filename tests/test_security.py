@@ -68,6 +68,13 @@ class SecurityTests(unittest.TestCase):
         self.assertNotIn("raisePasswordsForAX", search_block)
         self.assertNotIn("clickUnlock", search_block)
         self.assertNotIn("keystroke", search_block)
+        self.assertNotIn("launchPasswordsHidden", search_block)
+
+    def test_no_unconditional_browser_tells(self):
+        script = (ROOT / "ui.applescript").read_text(encoding="utf-8")
+        self.assertNotIn('tell application "Brave Browser"', script)
+        self.assertNotIn('if application "Brave Browser" is running', script)
+        self.assertIn("frontContext", script)
 
     def test_search_json_fixture_has_no_password_key(self):
         from lib.results import item_payload

@@ -168,8 +168,14 @@ private func searchField() -> (AXUIElement, AXUIElement)? {
     return nil
 }
 
+private func passwordsInstalled() -> Bool {
+    FileManager.default.fileExists(atPath: "/System/Applications/Passwords.app")
+}
+
 private func stateToken() -> String {
-    if passwordsApp() == nil { return "LOCKED" }
+    if passwordsApp() == nil {
+        return passwordsInstalled() ? "NOT_RUNNING" : "NO_APP"
+    }
     if searchField() != nil { return "UNLOCKED" }
     return "LOCKED"
 }

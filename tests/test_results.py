@@ -74,6 +74,17 @@ class ResultTests(unittest.TestCase):
         self.assertEqual(host_from_url(url), "webauth.arizona.edu")
         self.assertEqual(search_query_from_url(url), "arizona.edu")
 
+    def test_front_context_uses_url_not_idle_app(self):
+        from lib.context import query_from_front
+
+        self.assertEqual(
+            query_from_front("Google Chrome", "https://webauth.arizona.edu/webauth/login", ""),
+            "arizona.edu",
+        )
+        self.assertEqual(query_from_front("Alfred 5", "", "Alfred"), "")
+        self.assertEqual(query_from_front("Messages", "", ""), "Messages")
+        self.assertEqual(query_from_front("Passwords", "", ""), "")
+
 
 if __name__ == "__main__":
     unittest.main()

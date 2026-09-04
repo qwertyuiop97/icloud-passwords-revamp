@@ -74,6 +74,21 @@ class SearchMainTests(unittest.TestCase):
         inv.assert_called()
         hits.assert_not_called()
 
+    def test_not_running_empty_query_is_status_not_placeholder(self) -> None:
+        import search
+
+        with patch.object(search, "probe_vault", return_value="NOT_RUNNING"), patch.object(
+            search, "invalidate"
+        ), patch.object(
+            search, "bridge_search", side_effect=AssertionError("must not search")
+        ), patch.object(
+            search, "front_context", side_effect=AssertionError("must not probe browsers")
+        ):
+            raw = _run_main("")
+        payload = json.loads(raw)
+        self.assertEqual(len(payload["items"]), 1)
+        self.assertIn("isn't running", payload["items"][0]["title"])
+
     def test_unlocked_cache_is_marked(self) -> None:
         import search
 

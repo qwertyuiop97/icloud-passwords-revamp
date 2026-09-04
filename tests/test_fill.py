@@ -53,6 +53,13 @@ class FillTests(unittest.TestCase):
         self.assertEqual(steps[0]["menu"], "username")
         self.assertEqual(steps[0]["paste"], "none")
 
+    def test_close_after_copy_defaults_off_in_action(self):
+        from pathlib import Path
+
+        text = Path(__file__).resolve().parent.parent.joinpath("action.py").read_text()
+        self.assertIn('os.environ.get("close_after_copy") or "0"', text)
+        self.assertNotIn('os.environ.get("close_after_copy") or "1"', text)
+
 
 if __name__ == "__main__":
     unittest.main()

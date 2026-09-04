@@ -21,6 +21,7 @@ SIDEBAR_TITLES = {
 }
 STATUS_TITLES = {
     "NO_APP": "Install the Passwords app (macOS Sequoia or later)",
+    "NOT_RUNNING": "Passwords isn't running",
     "NEED_AX": "Enable Accessibility for Alfred, then search again",
     "LOCKED": "Unlock Passwords with Touch ID",
     "EMPTY": "No matching logins",
@@ -28,6 +29,8 @@ STATUS_TITLES = {
 }
 STATUS_SUB = {
     "LOCKED": "Return opens Passwords for Touch ID. Typing leaves it in the background.",
+    "NOT_RUNNING": "Return opens Passwords. Typing will not launch it.",
+    "NO_APP": "Install Passwords from macOS, then Return.",
     "NEED_AX": "System Settings → Privacy & Security → Accessibility → Alfred",
 }
 
@@ -90,8 +93,8 @@ def item_payload(entry: dict[str, str], action: str = "fill") -> dict[str, Any]:
 
     display_title = username if username else site
     display_sub = site if username else "Login"
-    if entry.get("source") == "tab" and site:
-        display_sub = f"{site}  ·  current tab"
+    if entry.get("source") in {"tab", "context"} and site:
+        display_sub = f"{site}  ·  current site"
     arg = json.dumps({"title": site, "username": username}, separators=(",", ":"))
     return {
         "title": display_title,
@@ -130,7 +133,7 @@ def status_item(status: str, detail: str = "") -> dict[str, Any]:
         "valid": False,
         "arg": "",
     }
-    if status in {"LOCKED", "NEED_AX"}:
+    if status in {"LOCKED", "NEED_AX", "NOT_RUNNING"}:
         item["rerun"] = 0.8
     return item
 

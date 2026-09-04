@@ -69,7 +69,15 @@ def _search_cmd(cmd: list[str], timeout: float) -> str:
         combined = (stdout + "\n" + stderr).strip()
         if "not allowed assistive access" in combined or "-25211" in combined:
             return "NEED_AX\n"
-        if _first_token(stdout) in {"OK", "EMPTY", "LOCKED", "NEED_AX", "NO_APP"}:
+        if _first_token(stdout) in {
+            "OK",
+            "EMPTY",
+            "LOCKED",
+            "NEED_AX",
+            "NO_APP",
+            "NOT_RUNNING",
+            "UNLOCKED",
+        }:
             return stdout
         return ""
     return stdout
@@ -88,15 +96,62 @@ def probe_vault() -> str:
     binary = _searchax()
     if binary.is_file() and os.access(binary, os.X_OK):
         token = _first_token(_search_cmd([str(binary), "--state"], 1.5))
-        if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP"}:
+        if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP", "NOT_RUNNING"}:
             return token
     js = _jxa()
     token = _first_token(
         _search_cmd(["/usr/bin/osascript", "-l", "JavaScript", str(js), "--state"], 2)
     )
-    if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP"}:
+    if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP", "NOT_RUNNING"}:
         return token
     return "LOCKED"
+
+
+_CHROME_URL = (
+    "Google Chrome",
+    "Chromium",
+    "Microsoft Edge",
+    "Brave Browser",
+    "Arc",
+    "Vivaldi",
+    "Dia",
+)
+_SAFARI_URL = ("Safari", "Safari Technology Preview")
+
+
+def _url_of_front_browser(app_name: str) -> str:
+    """Ask only the already-frontmost browser. Never probes other browsers."""
+    if app_name in _CHROME_URL:
+        src = f'tell application "{app_name}" to get URL of active tab of front window'
+    elif app_name in _SAFARI_URL:
+        src = f'tell application "{app_name}" to get URL of current tab of front window'
+    else:
+        return ""
+    try:
+        completed = subprocess.run(
+            ["/usr/bin/osascript", "-e", src],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            env=_env(),
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return ""
+    if completed.returncode != 0:
+        return ""
+    return (completed.stdout or "").strip()
+
+
+def front_context() -> tuple[str, str, str]:
+    """Frontmost non-Alfred app, URL, window title. Never launches a browser."""
+    raw = _run(["frontcontext"], timeout=4)
+    parts = (raw or "").split("\t")
+    while len(parts) < 3:
+        parts.append("")
+    app_name, _empty, title = parts[0].strip(), parts[1].strip(), parts[2].strip()
+    url = _url_of_front_browser(app_name) if app_name else ""
+    return app_name, url, title
 
 
 def search(query: str) -> str:

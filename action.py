@@ -141,7 +141,7 @@ def main(argv: list[str]) -> int:
         _notify("iCloud Passwords", "Verification code copied")
     elif last_copy == "username":
         _notify("iCloud Passwords", "User name copied")
-    if (os.environ.get("close_after_copy") or "1") == "1" and action != "reveal":
+    if (os.environ.get("close_after_copy") or "0") == "1" and action != "reveal":
         quit_passwords()
     return 0
 

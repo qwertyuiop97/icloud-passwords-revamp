@@ -283,13 +283,35 @@ on copyKind(kind)
 end copyKind
 
 on prepareAccount(titleText, userText)
-	launchPasswordsHidden()
 	set q to titleText
 	if userText is not "" then set q to titleText & " " & userText
+	tell application "System Events"
+		if not (exists process "Passwords") then
+			my launchPasswordsHidden()
+		end if
+	end tell
+	if findSearchField() is missing value then
+		my launchPasswordsHidden()
+		my raisePasswordsForAX()
+		delay 0.25
+	end if
 	if not setSearch(q) then return "LOCKED"
 	selectFirstRow()
 	return "OK"
 end prepareAccount
+
+on frontContext()
+	set appName to my frontmostNonAlfred()
+	set winTitle to ""
+	tell application "System Events"
+		try
+			tell process appName
+				if (count of windows) > 0 then set winTitle to name of window 1 as string
+			end tell
+		end try
+	end tell
+	return appName & tab & "" & tab & winTitle
+end frontContext
 
 on inspectFrontFields()
 	set out to ""
@@ -420,7 +442,10 @@ on run argv
 		if (count of argv) ≥ 2 then set q to item 2 of argv
 		if q is "--state" then
 			tell application "System Events"
-				if not (exists process "Passwords") then return "LOCKED"
+				if not (exists process "Passwords") then
+					if my passwordsInstalled() then return "NOT_RUNNING"
+					return "NO_APP"
+				end if
 			end tell
 			if findSearchField() is missing value then return "LOCKED"
 			return "UNLOCKED"
@@ -432,7 +457,10 @@ on run argv
 			return "NEED_AX"
 		end try
 		tell application "System Events"
-			if not (exists process "Passwords") then return "LOCKED"
+			if not (exists process "Passwords") then
+				if my passwordsInstalled() then return "NOT_RUNNING"
+				return "NO_APP"
+			end if
 		end tell
 		try
 			with timeout of 4 seconds
@@ -469,7 +497,10 @@ on run argv
 		set userText to item 4 of argv
 		set prep to prepareAccount(titleText, userText)
 		if prep is not "OK" then return prep
-		tell application "System Events" to tell process "Passwords" to set frontmost to true
+		if copyKind(kind) then
+			return "OK"
+		end if
+		my raisePasswordsForAX()
 		delay 0.15
 		if copyKind(kind) then
 			return "OK"
@@ -490,6 +521,10 @@ on run argv
 	
 	if mode is "frontmost" then
 		return frontmostNonAlfred()
+	end if
+	
+	if mode is "frontcontext" then
+		return frontContext()
 	end if
 	
 	if mode is "activate" then
