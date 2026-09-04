@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fill or copy a selected login. Password text never enters this process."""
+"""Fill or copy the login selected in Alfred."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from lib.inspect import parse_fields
 
 
 def _notify(title: str, message: str) -> None:
-    # Labels only. Never pass a password, OTP, or clipboard contents.
+    # title/message are labels, not secrets.
     subprocess.run(
         [
             "/usr/bin/osascript",

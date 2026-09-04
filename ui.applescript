@@ -1,6 +1,6 @@
 #!/usr/bin/osascript
--- Drive Passwords.app and the frontmost login form.
--- This script must never print a password, OTP, or field value.
+-- UI bridge for the iCloud Passwords Revamp Alfred workflow.
+-- Never print a password, OTP, or field value.
 
 on browserTabURL()
 	if application "Safari" is running then

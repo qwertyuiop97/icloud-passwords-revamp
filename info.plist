@@ -112,24 +112,13 @@
 	<key>readme</key>
 	<string># iCloud Passwords Revamp
 
-Alfred 5 workflow for Apple’s Passwords app.
+Alfred workflow for Apple’s Passwords app.
 
-Type `pw arizona` and matching logins appear under the query. The main text is the email or user name. The subtitle is the app, website, or URL. Return fills the login form in the frontmost app.
+Type `pw` then a site, URL, or email. Results appear under the query (email first, site as the subtitle). Return fills the frontmost login form: user name, then password. A password is never pasted into a user name / NetID / email field.
 
-## Setup
+Requires Alfred 5 with Powerpack, macOS Sequoia or later, and Accessibility for Alfred.
 
-1. Alfred 5 with Powerpack, macOS Sequoia or later.
-2. System Settings → Privacy &amp; Security → Accessibility → Alfred.
-3. Unlock Passwords with Touch ID the first time a search needs it.
-
-## Use
-
-- `pw` — if a browser tab is open, suggest logins for that site
-- `pw arizona` — every saved email for Arizona / arizona.edu
-- ↩ — fill user name then password (NetID + Password on a WebAuth page)
-- ⌘↩ copy password · ⌥↩ copy verification code · ⌃↩ copy user name · ⇧↩ open in Passwords
-
-The workflow never reads password text into its own process. Passwords.app copies the secret, and paste is blocked unless the focused field is a real password field.
+https://github.com/qwertyuiop97/icloud-passwords-revamp
 </string>
 	<key>uidata</key>
 	<dict>

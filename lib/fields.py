@@ -1,4 +1,4 @@
-"""Classify login fields. Password text is never read or returned."""
+"""Classify login form fields from Accessibility metadata (no field values)."""
 
 from __future__ import annotations
 
@@ -34,7 +34,6 @@ OTP_HINTS = (
     "authenticator",
 )
 SECURE_SUBROLES = {"AXSecureTextField"}
-TEXT_ROLES = {"AXTextField", "AXComboBox", "AXTextArea", "AXStaticText"}
 
 
 def _blob(field: dict[str, Any]) -> str:
@@ -86,7 +85,6 @@ def is_username_field(field: dict[str, Any]) -> bool:
 
 
 def may_receive_password(field: dict[str, Any] | None) -> bool:
-    """Password may only go into a secure field, never a username field."""
     if not field:
         return False
     if is_username_field(field):
@@ -130,13 +128,6 @@ def _pick(candidates: list[dict[str, Any]], focused: dict[str, Any] | None) -> d
 
 
 def plan_fill(fields: list[dict[str, Any]]) -> FillPlan:
-    """Decide what to paste.
-
-    - Login form with username + password fields: fill both.
-    - Only a password field (or focus in a password field with no username): password only.
-    - Only a username field: username only.
-    - Never put a password into a username field.
-    """
     users = [f for f in fields if is_username_field(f)]
     passwords = [f for f in fields if is_password_field(f)]
     focused = next((f for f in fields if f.get("focused")), None)

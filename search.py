@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alfred Script Filter. Prints JSON. Never prints a password."""
+"""Alfred Script Filter entry point."""
 
 from __future__ import annotations
 

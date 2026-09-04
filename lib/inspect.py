@@ -1,4 +1,4 @@
-"""Parse field TSV from the UI bridge. Values of fields are never included."""
+"""Parse Accessibility field metadata. Field values are not in this TSV."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Read the frontmost browser tab URL. Never reads page content or passwords."""
+"""Host name from a browser tab URL."""
 
 from __future__ import annotations
 

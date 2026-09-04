@@ -1,4 +1,4 @@
-"""Alfred Script Filter JSON. Metadata only — never passwords."""
+"""Alfred Script Filter JSON. Rows are site + username only."""
 
 from __future__ import annotations
 
@@ -83,7 +83,7 @@ def matches(entry: dict[str, str], query: str) -> bool:
 def item_payload(entry: dict[str, str], action: str = "fill") -> dict[str, Any]:
     site = entry.get("title") or ""
     username = entry.get("username") or ""
-    # Main row: email / user name. Subtitle: app, website, or URL.
+
     display_title = username if username else site
     display_sub = site if username else "Login"
     if entry.get("source") == "tab" and site:

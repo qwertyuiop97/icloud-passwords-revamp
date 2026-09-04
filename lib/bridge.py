@@ -1,4 +1,4 @@
-"""Talk to ui.applescript. Never log or return password values."""
+"""Run ui.applescript. stdout is status/metadata, never a password."""
 
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ class BridgeError(RuntimeError):
 
 def _run(args: list[str], timeout: int = TIMEOUT) -> str:
     env = os.environ.copy()
-    # Keep secrets out of crash logs we control.
     env.pop("HISTFILE", None)
     completed = subprocess.run(
         ["/usr/bin/osascript", str(UI_SCRIPT), *args],
@@ -56,7 +55,7 @@ def inspect_fields(app_name: str) -> str:
 
 
 def copy_menu(kind: str, title: str, username: str) -> str:
-    """Ask Passwords to copy a field via its own menu. We do not read it."""
+    """Tell Passwords to copy a field. The secret stays in the pasteboard."""
     if kind not in {"username", "password", "otp"}:
         raise BridgeError("ERROR", "bad copy kind")
     return _run(["copy", kind, title, username])

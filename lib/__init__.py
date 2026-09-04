@@ -1,1 +1,1 @@
-"""Alfred iCloud Passwords helpers. Secrets never enter Python."""
+"""Helpers for the iCloud Passwords Revamp Alfred workflow."""

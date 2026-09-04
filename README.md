@@ -1,73 +1,72 @@
 # iCloud Passwords Revamp
 
-Alfred 5 workflow for Apple’s Passwords app on macOS Sequoia, Tahoe, and Golden Gate.
+An [Alfred](https://www.alfredapp.com/) workflow for Apple’s Passwords app on macOS Sequoia, Tahoe, and Golden Gate.
 
-Type `pw arizona` and matching logins appear under the query. The main text is the email or user name. The subtitle is the app, website, or URL. Return fills the login form in front of you.
+Search your iCloud logins from Alfred. Results show the email (or user name) on the first line and the site or URL underneath. Press return to fill the login form in the app you were using.
 
-This is an independent workflow, not a fork. It has to work for whoever installs it, against **their** iCloud Passwords vault. It never ships anyone’s logins.
+![Search results for pw arizona](docs/search.png)
 
-## What ↩ does on a login page
-
-On a page like University WebAuth (NetID + Password):
-
-1. Type `pw arizona`
-2. Pick the row whose main text is the right email / NetID
-3. Return fills **NetID**, then **Password**
-
-It will not paste a password into the NetID / email / user name field.
-
-If only a user name field is focused, it fills the user name. If only a password field is focused, it fills the password.
-
-## Setup
-
-- macOS Sequoia 15 or later
-- Alfred 5 with the Powerpack
-- System Settings → Privacy & Security → Accessibility → **Alfred**
-- Unlock Passwords with Touch ID the first time a search needs the vault
+This is a standalone Alfred workflow. It talks to the Passwords app on the Mac that runs it. It does not include anyone else’s vault.
 
 ## Install
 
-Download `iCloud-Passwords-Revamp.alfredworkflow` from
-[Releases](https://github.com/qwertyuiop97/icloud-passwords-revamp/releases)
-and double-click it.
+Requires Alfred 5 with the Powerpack, and macOS Sequoia or later.
 
-From source:
+1. Download `iCloud-Passwords-Revamp.alfredworkflow` from [Releases](https://github.com/qwertyuiop97/icloud-passwords-revamp/releases).
+2. Double-click the file to add it in Alfred.
+3. Grant Accessibility to Alfred: System Settings → Privacy & Security → Accessibility.
+4. The first search may ask you to unlock Passwords with Touch ID.
 
-```sh
-python3 build.py
-open dist/iCloud-Passwords-Revamp.alfredworkflow
-```
+## Usage
 
-## Use
+Type `pw` in Alfred, then a site, app name, URL, user name, or email.
 
-| Input | Result |
+![Current tab suggestions](docs/current-tab.png)
+
+| Input | What happens |
 | --- | --- |
-| `pw` | Suggests logins for the current browser tab when possible |
-| `pw arizona` | Every saved login whose site, URL, or email matches |
-| ↩ | Fill user name then password |
-| ⌘↩ | Copy password (marked concealed for clipboard history) |
-| ⌥↩ | Copy verification code |
-| ⌃↩ | Copy user name |
-| ⇧↩ | Reveal the item in Passwords |
+| `pw` | Suggests logins for the current browser tab when it can read the URL |
+| `pw arizona` | Lists every matching login (every email for that site) |
+| ↩ | Fills user name, then password |
+| ⌘↩ | Copies the password |
+| ⌥↩ | Copies the verification code |
+| ⌃↩ | Copies the user name |
+| ⇧↩ | Opens the item in Passwords |
 
-## Preferences
+On a campus WebAuth page (NetID + Password), pick the row for the right email and press return. NetID is filled first, then the password field. A password is never pasted into a user name, email, or NetID field.
 
-1. **Search keyword** (default `pw`)
-2. **Current tab** — suggest logins for the open browser tab
-3. **Fill both fields** — user name and password together on login forms
-4. **Close after fill**
+If the window only has a user name field, only the user name is filled. If it only has a password field, only the password is filled.
 
-## Safety
+## Configuration
 
-- Password text never enters the Python process
-- Alfred results contain site + user name only
-- Paste of a password is refused unless the focused field is a password field
-- Clipboard password copies are stamped `org.nspasteboard.ConcealedType`
-- The clipboard is cleared after an auto-fill of a password
+Open the workflow in Alfred and click Configure Workflow:
+
+| Setting | Default |
+| --- | --- |
+| Search keyword | `pw` |
+| Suggest logins for the current browser tab | on |
+| Fill user name and password together on login forms | on |
+| Quit Passwords after filling or copying | on |
+
+## How it works
+
+Alfred does not get a public API for iCloud Keychain, so the workflow drives the Passwords app through Accessibility.
+
+- Search results are site + user name only. The password is not in the JSON Alfred sees.
+- Filling uses Passwords’ own Copy User Name / Copy Password / Copy Code menu items. The Python code never reads the secret.
+- Before a password is pasted, the focused field has to be a password field (`AXSecureTextField`). If it is not, paste is aborted and the clipboard is cleared.
+- Copied passwords are marked with `org.nspasteboard.ConcealedType` so clipboard history tools can skip them.
 
 ## Development
 
 ```sh
 PYTHONPATH=. python3 -m unittest discover -s tests -v
+python3 docs/render_screenshots.py
 python3 build.py
 ```
+
+`python3 build.py` writes `info.plist` and `dist/iCloud-Passwords-Revamp.alfredworkflow`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

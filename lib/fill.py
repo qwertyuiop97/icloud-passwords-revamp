@@ -1,7 +1,8 @@
-"""Build a paste sequence. Password strings never appear here."""
+"""Turn a selected login + form fields into copy/paste steps."""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from .fields import FillPlan, may_receive_password, may_receive_username, plan_fill
@@ -17,8 +18,6 @@ ALLOWED_ACTIONS = {
 
 
 def parse_account(arg: str) -> dict[str, str]:
-    import json
-
     data = json.loads(arg)
     if not isinstance(data, dict):
         raise ValueError("account payload must be an object")
@@ -36,11 +35,7 @@ def steps_for(
     fields: list[dict[str, Any]],
     fill_both: bool = True,
 ) -> list[dict[str, str]]:
-    """Return UI steps. Each step names a Passwords menu and a paste target kind.
-
-    kind is username | password | none. The executor refuses to paste a
-    password step unless the live target still passes may_receive_password.
-    """
+    """Copy/paste steps. `paste` is username, password, or none."""
     if action not in ALLOWED_ACTIONS:
         raise ValueError(f"unknown action {action}")
     if action == "reveal":
