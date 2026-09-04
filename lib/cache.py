@@ -30,8 +30,17 @@ def load() -> dict:
 
 
 def save(query: str, rows: list[dict[str, str]]) -> None:
-    payload = {"q": query, "rows": rows, "ts": time.time()}
+    payload = {"q": query, "rows": rows, "ts": time.time(), "live": True}
     _path().write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+
+
+def invalidate() -> None:
+    path = _path()
+    try:
+        path.unlink(missing_ok=True)
+    except TypeError:
+        if path.is_file():
+            path.unlink()
 
 
 def local_hits(query: str) -> list[dict[str, str]] | None:

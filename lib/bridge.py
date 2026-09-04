@@ -75,34 +75,45 @@ def _search_cmd(cmd: list[str], timeout: float) -> str:
     return stdout
 
 
-def search(query: str) -> str:
-    binary = ROOT / "searchax"
-    js = ROOT / "search_ui.js"
-    last = ""
+def _searchax() -> Path:
+    return ROOT / "searchax"
+
+
+def _jxa() -> Path:
+    return ROOT / "search_ui.js"
+
+
+def probe_vault() -> str:
+    """Background lock check. Never opens or focuses Passwords."""
+    binary = _searchax()
     if binary.is_file() and os.access(binary, os.X_OK):
-        last = _search_cmd([str(binary), query], 2.2)
-        if _first_token(last) == "OK":
-            return last
+        token = _first_token(_search_cmd([str(binary), "--state"], 1.5))
+        if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP"}:
+            return token
+    js = _jxa()
+    token = _first_token(
+        _search_cmd(["/usr/bin/osascript", "-l", "JavaScript", str(js), "--state"], 2)
+    )
+    if token in {"UNLOCKED", "LOCKED", "NEED_AX", "NO_APP"}:
+        return token
+    return "LOCKED"
+
+
+def search(query: str) -> str:
+    binary = _searchax()
+    js = _jxa()
+    if binary.is_file() and os.access(binary, os.X_OK):
+        raw = _search_cmd([str(binary), query], 2.0)
+        token = _first_token(raw)
+        if token:
+            return raw
     js_raw = _search_cmd(
         ["/usr/bin/osascript", "-l", "JavaScript", str(js), query],
-        5,
+        4,
     )
-    token = _first_token(js_raw)
-    if token == "OK" or token == "EMPTY":
+    if _first_token(js_raw):
         return js_raw
-    if token:
-        last = js_raw
-    try:
-        as_raw = _run(["search", query], timeout=8)
-    except subprocess.TimeoutExpired:
-        as_raw = ""
-    except BridgeError as err:
-        if last:
-            return last
-        raise err
-    if _first_token(as_raw) == "OK" or _first_token(as_raw):
-        return as_raw
-    return last or "ERROR\n"
+    return "LOCKED\n"
 
 
 def inspect_fields(app_name: str) -> str:

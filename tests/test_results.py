@@ -26,7 +26,7 @@ class ResultTests(unittest.TestCase):
 
         item = status_item("LOCKED")
         self.assertFalse(item["valid"])
-        self.assertIn("Leave this window open", item["subtitle"])
+        self.assertIn("Return opens Passwords", item["subtitle"])
         self.assertEqual(item["rerun"], 0.8)
 
     def test_empty_query_does_not_list_vault(self):

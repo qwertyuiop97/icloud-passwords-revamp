@@ -188,17 +188,14 @@ on setSearch(theQuery)
 	if sf is missing value then return false
 	tell application "System Events"
 		tell process "Passwords"
-			-- Do not keystroke. That would type into Alfred if it is frontmost.
-			try
-				set value of attribute "AXFocused" of sf to true
-			end try
+			-- Do not keystroke or focus. Search must not bring Passwords forward.
 			set value of sf to theQuery
 			try
 				perform action "AXConfirm" of sf
 			end try
 		end tell
 	end tell
-	delay 0.35
+	delay 0.18
 	return true
 end setSearch
 
@@ -421,42 +418,31 @@ on run argv
 		end if
 		set q to ""
 		if (count of argv) ≥ 2 then set q to item 2 of argv
+		if q is "--state" then
+			tell application "System Events"
+				if not (exists process "Passwords") then return "LOCKED"
+			end tell
+			if findSearchField() is missing value then return "LOCKED"
+			return "UNLOCKED"
+		end if
 		if q is "" then return "EMPTY"
 		try
 			tell application "System Events" to get UI elements of (first process whose frontmost is true)
 		on error
 			return "NEED_AX"
 		end try
-		launchPasswordsHidden()
+		tell application "System Events"
+			if not (exists process "Passwords") then return "LOCKED"
+		end tell
 		try
-			with timeout of 6 seconds
-				if findSearchField() is missing value then
-					raisePasswordsForAX()
-					delay 0.2
-				end if
-				if my windowShowsLock() then
-					clickUnlock()
-					my refocusAlfred()
-					return "LOCKED"
-				end if
-				if findSearchField() is missing value then
-					raisePasswordsForAX()
-					delay 0.15
-					tell application "System Events" to keystroke "f" using command down
-					delay 0.15
-				end if
-				if findSearchField() is missing value then
-					-- First-run unlock. Leave Passwords visible for Touch ID.
-					return "LOCKED"
-				end if
+			with timeout of 4 seconds
+				if findSearchField() is missing value then return "LOCKED"
 				if not setSearch(q) then return "LOCKED"
 				set rows to collectRows()
 			end timeout
 		on error
-			my refocusAlfred()
 			return "LOCKED"
 		end try
-		my refocusAlfred()
 		if (count of rows) is 0 then return "EMPTY"
 		set out to "OK" & linefeed
 		set n to 0

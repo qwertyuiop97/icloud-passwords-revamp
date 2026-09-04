@@ -78,8 +78,7 @@ private func findOutlines(_ el: AXUIElement, depth: Int = 0, limit: Int = 8, int
         out.append(el)
         return
     }
-    let role = roleOf(el)
-    if role == "AXToolbar" { return }
+    if roleOf(el) == "AXToolbar" { return }
     for child in children(el) {
         if isOutline(child) {
             out.append(child)
@@ -136,79 +135,12 @@ private func isLocked(_ el: AXUIElement, depth: Int = 0) -> Bool {
     return false
 }
 
-private func pressUnlock(_ el: AXUIElement, depth: Int = 0) -> Bool {
-    if depth > 8 { return false }
-    if isOutline(el) { return false }
-    if roleOf(el) == "AXButton" {
-        let sub = subroleOf(el)
-        if !sub.contains("Close") && !sub.contains("FullScreen") && !sub.contains("Minimize")
-            && !sub.contains("Zoom")
-        {
-            return AXUIElementPerformAction(el, kAXPressAction as CFString) == .success
-        }
-    }
-    for child in children(el) {
-        if pressUnlock(child, depth: depth + 1) { return true }
-    }
-    return false
-}
-
-private func commandF() {
-    let src = CGEventSource(stateID: .hidSystemState)
-    let down = CGEvent(keyboardEventSource: src, virtualKey: 0x03, keyDown: true)
-    let up = CGEvent(keyboardEventSource: src, virtualKey: 0x03, keyDown: false)
-    down?.flags = .maskCommand
-    up?.flags = .maskCommand
-    down?.post(tap: .cghidEventTap)
-    up?.post(tap: .cghidEventTap)
-}
-
-private func promptTrust() -> Bool {
-    if AXIsProcessTrusted() { return true }
-    let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
-    AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
-    return AXIsProcessTrusted()
-}
-
 private func passwordsApp() -> NSRunningApplication? {
     NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.Passwords").first
 }
 
-private func launchPasswords() {
-    let task = Process()
-    task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    task.arguments = ["-g", "-a", "Passwords"]
-    try? task.run()
-    task.waitUntilExit()
-}
-
-private func activatePasswords() {
-    if passwordsApp() == nil {
-        launchPasswords()
-        usleep(350_000)
-    }
-    guard let running = passwordsApp() else { return }
-    running.unhide()
-    running.activate()
-    let script = NSAppleScript(
-        source: "tell application \"System Events\" to set frontmost of process \"Passwords\" to true"
-    )
-    script?.executeAndReturnError(nil)
-    usleep(150_000)
-}
-
 private func axApp() -> AXUIElement? {
     passwordsApp().map { AXUIElementCreateApplication($0.processIdentifier) }
-}
-
-private func activateAlfred() {
-    let ids = ["com.runningwithcrayons.Alfred", "com.runningwithcrayons.Alfred-3"]
-    for id in ids {
-        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first {
-            app.activate()
-            return
-        }
-    }
 }
 
 private func windowIsLocked(_ win: AXUIElement) -> Bool {
@@ -225,83 +157,62 @@ private func pickOutline(_ win: AXUIElement) -> AXUIElement? {
     return outlines.max(by: { numberOfChildren($0) < numberOfChildren($1) })
 }
 
+private func searchField() -> (AXUIElement, AXUIElement)? {
+    guard let app = axApp() else { return nil }
+    for win in windows(of: app) {
+        if windowIsLocked(win) { return nil }
+        if let sf = toolbarSearch(win) {
+            return (win, sf)
+        }
+    }
+    return nil
+}
+
+private func stateToken() -> String {
+    if passwordsApp() == nil { return "LOCKED" }
+    if searchField() != nil { return "UNLOCKED" }
+    return "LOCKED"
+}
+
+private func emitRows(win: AXUIElement) {
+    guard let outline = pickOutline(win), numberOfChildren(outline) > 0 else {
+        fputs("EMPTY\n", stdout)
+        return
+    }
+    fputs("OK\n", stdout)
+    for row in children(outline).prefix(20) {
+        if let line = rowLine(row) {
+            fputs(line + "\n", stdout)
+        }
+    }
+}
+
 func main() {
-    if !promptTrust() {
+    if !AXIsProcessTrusted() {
         fputs("NEED_AX\n", stdout)
         return
     }
-    let query = CommandLine.arguments.dropFirst().joined(separator: " ")
-        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let args = CommandLine.arguments.dropFirst().map { $0 }
+    if args.first == "--state" {
+        fputs(stateToken() + "\n", stdout)
+        return
+    }
+    let query = args.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     guard !query.isEmpty else {
         fputs("EMPTY\n", stdout)
         return
     }
-
-    activatePasswords()
-    var search: AXUIElement?
-    var win: AXUIElement?
-
-    for step in 0..<12 {
-        guard let app = axApp() else {
-            usleep(80_000)
-            continue
-        }
-        let wins = windows(of: app)
-        for candidate in wins {
-            if windowIsLocked(candidate) {
-                _ = pressUnlock(candidate)
-                continue
-            }
-            if let sf = toolbarSearch(candidate) {
-                search = sf
-                win = candidate
-                break
-            }
-        }
-        if search != nil { break }
-        if step == 4 {
-            activatePasswords()
-        }
-        if step == 8 {
-            activatePasswords()
-            commandF()
-        }
-        usleep(80_000)
-    }
-
-    guard let search, let win else {
-        activateAlfred()
+    guard let (win, search) = searchField() else {
         fputs("LOCKED\n", stdout)
         return
     }
-
-    AXUIElementSetAttributeValue(search, kAXFocusedAttribute as CFString, kCFBooleanTrue)
     AXUIElementSetAttributeValue(search, kAXValueAttribute as CFString, query as CFString)
     usleep(180_000)
-
-    var outline = pickOutline(win)
-    if outline == nil || numberOfChildren(outline!) == 0 {
-        usleep(180_000)
-        if let app = axApp(), let current = windows(of: app).first {
-            outline = pickOutline(current)
-        }
+    var current = win
+    if let app = axApp(), let next = windows(of: app).first {
+        current = next
     }
-    guard let outline, numberOfChildren(outline) > 0 else {
-        activateAlfred()
-        fputs("EMPTY\n", stdout)
-        return
-    }
-
-    let rows = children(outline)
-    fputs("OK\n", stdout)
-    var n = 0
-    for row in rows.prefix(20) {
-        if let line = rowLine(row) {
-            fputs(line + "\n", stdout)
-            n += 1
-        }
-    }
-    activateAlfred()
+    emitRows(win: current)
 }
 
 main()

@@ -1,6 +1,5 @@
 #!/usr/bin/osascript -l JavaScript
-// Fast Passwords search for Alfred. Metadata only. Never walk outline rows
-// while looking for the search field.
+// Background Passwords search. Does not open, focus, or unhide Passwords.
 
 function kids(el) {
   try {
@@ -112,150 +111,29 @@ function rowLine(row) {
   return texts[0] + "\t" + (texts[1] || "");
 }
 
-function isLocked(el, depth) {
-  if (depth > 8) return false;
-  if (isOutline(el)) return false;
-  try {
-    if (el.role() === "AXStaticText") {
-      const v = String(el.value() || el.name() || "").toLowerCase();
-      if (v.indexOf("passwords is locked") >= 0) return true;
-      if (v.indexOf("touch id or enter your password") >= 0) return true;
-    }
-  } catch (e) {}
-  const nodes = kids(el);
-  for (let i = 0; i < nodes.length; i++) {
-    if (isLocked(nodes[i], depth + 1)) return true;
-  }
-  return false;
-}
-
-function pressUnlock(el, depth) {
-  if (depth > 8) return false;
-  if (isOutline(el)) return false;
-  try {
-    if (el.role() === "AXButton") {
-      const sub = subroleOf(el);
-      if (
-        sub.indexOf("Close") < 0 &&
-        sub.indexOf("FullScreen") < 0 &&
-        sub.indexOf("Minimize") < 0 &&
-        sub.indexOf("Zoom") < 0
-      ) {
-        try {
-          el.actions.byName("AXPress").perform();
-          return true;
-        } catch (e) {
-          try {
-            el.click();
-            return true;
-          } catch (e2) {}
-        }
-      }
-    }
-  } catch (e) {}
-  const nodes = kids(el);
-  for (let i = 0; i < nodes.length; i++) {
-    if (pressUnlock(nodes[i], depth + 1)) return true;
-  }
-  return false;
-}
-
-function alfredFront() {
-  const se = Application("System Events");
-  try {
-    se.processes.byName("Alfred 5").frontmost = true;
-  } catch (e) {
-    try {
-      se.processes.byName("Alfred").frontmost = true;
-    } catch (e2) {}
-  }
-}
-
 function passwordsProc(se) {
   try {
-    const proc = se.processes.byName("Passwords");
-    try {
-      proc.visible = true;
-    } catch (e) {}
-    return proc;
+    return se.processes.byName("Passwords");
   } catch (e) {
-    const app = Application.currentApplication();
-    app.includeStandardAdditions = true;
-    app.doShellScript("/usr/bin/open -g -a Passwords");
-    delay(0.35);
-    try {
-      const proc = se.processes.byName("Passwords");
-      try {
-        proc.visible = true;
-      } catch (e2) {}
-      return proc;
-    } catch (e3) {
-      return null;
-    }
+    return null;
   }
 }
 
-function run(argv) {
-  const query = argv.length ? String(argv[0]) : "";
-  if (!query) return "EMPTY";
-  const se = Application("System Events");
-  const proc = passwordsProc(se);
-  if (!proc) return "LOCKED";
+function findLiveSearch(proc) {
+  let windows = [];
   try {
-    proc.frontmost = true;
-  } catch (e) {}
-  delay(0.15);
-
-  let sf = null;
-  let win = null;
-  for (let step = 0; step < 12; step++) {
-    let windows = [];
-    try {
-      windows = proc.windows();
-    } catch (e) {
-      windows = [];
-    }
-    for (let i = 0; i < windows.length; i++) {
-      const candidate = windows[i];
-      let hasToolbar = false;
-      try {
-        hasToolbar = candidate.toolbars().length > 0;
-      } catch (e) {}
-      if (!hasToolbar && isLocked(candidate, 0)) {
-        pressUnlock(candidate, 0);
-        continue;
-      }
-      const hit = toolbarSearch(candidate);
-      if (hit) {
-        sf = hit;
-        win = candidate;
-        break;
-      }
-    }
-    if (sf) break;
-    if (step === 5 || step === 9) {
-      try {
-        proc.frontmost = true;
-        se.keystroke("f", { using: "command down" });
-      } catch (e) {}
-    }
-    delay(0.09);
+    windows = proc.windows();
+  } catch (e) {
+    return null;
   }
-
-  if (!sf) {
-    alfredFront();
-    return "LOCKED";
+  for (let i = 0; i < windows.length; i++) {
+    const hit = toolbarSearch(windows[i]);
+    if (hit) return { win: windows[i], sf: hit };
   }
+  return null;
+}
 
-  try {
-    sf.focused = true;
-  } catch (e) {}
-  sf.value = query;
-  delay(0.2);
-
-  try {
-    win = proc.windows[0];
-  } catch (e) {}
+function emitRows(win) {
   const found = [];
   biggestOutline(win, 0, found);
   let outline = null;
@@ -267,7 +145,6 @@ function run(argv) {
       bestN = n;
     }
   }
-  alfredFront();
   if (!outline || bestN < 1) return "EMPTY";
   const n = Math.min(bestN, 15);
   const lines = ["OK"];
@@ -285,4 +162,25 @@ function run(argv) {
     if (line) lines.push(line);
   }
   return lines.join("\n");
+}
+
+function run(argv) {
+  const se = Application("System Events");
+  const proc = passwordsProc(se);
+  if (argv.length && String(argv[0]) === "--state") {
+    if (!proc) return "LOCKED";
+    return findLiveSearch(proc) ? "UNLOCKED" : "LOCKED";
+  }
+  const query = argv.length ? String(argv[0]) : "";
+  if (!query) return "EMPTY";
+  if (!proc) return "LOCKED";
+  const live = findLiveSearch(proc);
+  if (!live) return "LOCKED";
+  live.sf.value = query;
+  delay(0.18);
+  try {
+    return emitRows(proc.windows[0]);
+  } catch (e) {
+    return emitRows(live.win);
+  }
 }

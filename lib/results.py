@@ -27,7 +27,7 @@ STATUS_TITLES = {
     "ERROR": "Could not search Passwords",
 }
 STATUS_SUB = {
-    "LOCKED": "Leave this window open. Results appear after you authenticate.",
+    "LOCKED": "Return opens Passwords for Touch ID. Typing leaves it in the background.",
     "NEED_AX": "System Settings → Privacy & Security → Accessibility → Alfred",
 }
 
