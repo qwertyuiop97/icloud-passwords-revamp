@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -36,8 +37,13 @@ def _items_from_search(query: str, *, tab_hint: bool = False) -> str:
         return alfred_json([status_item("ERROR")])
     status, rows = parse_search_output(raw)
     if status != "OK":
+        item = status_item(status)
+        if status == "LOCKED":
+            item["valid"] = True
+            item["arg"] = json.dumps({"cmd": "unlock"})
+            item["subtitle"] = "Return opens Passwords. Stay in Alfred if Touch ID already appeared."
         rerun = 0.8 if status in {"LOCKED", "NEED_AX"} else None
-        return alfred_json([status_item(status)], rerun=rerun)
+        return alfred_json([item], rerun=rerun)
     if tab_hint:
         for row in rows:
             row["source"] = "tab"

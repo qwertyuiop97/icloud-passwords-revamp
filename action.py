@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -57,6 +58,13 @@ def main(argv: list[str]) -> int:
     if not arg:
         _notify("iCloud Passwords", "No login selected.")
         return 1
+    try:
+        peeked = json.loads(arg)
+        if isinstance(peeked, dict) and peeked.get("cmd") == "unlock":
+            subprocess.run(["/usr/bin/open", "-a", "Passwords"], check=False)
+            return 0
+    except Exception:
+        pass
     try:
         account = parse_account(arg)
     except ValueError:

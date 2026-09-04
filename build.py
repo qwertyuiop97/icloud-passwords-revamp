@@ -163,7 +163,7 @@ def workflow_plist() -> dict:
             "close_after_copy": "0",
         },
         "variablesdontexport": [],
-        "version": "3.1.0",
+        "version": "1.0.0",
         "webaddress": REPO_URL,
     }
 

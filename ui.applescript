@@ -91,19 +91,9 @@ on findSearchField()
 	tell application "System Events"
 		tell process "Passwords"
 			if not (exists window 1) then return missing value
-			tell window 1
-				try
-					if exists (first text field whose subrole is "AXSearchField") then
-						return first text field whose subrole is "AXSearchField"
-					end if
-				end try
-				try
-					with timeout of 3 seconds
-						set cands to (every text field of entire contents whose subrole is "AXSearchField")
-						if (count of cands) > 0 then return item 1 of cands
-					end timeout
-				end try
-			end tell
+			try
+				return text field 1 of group 2 of toolbar 1 of window 1
+			end try
 		end tell
 	end tell
 	return missing value
@@ -155,99 +145,43 @@ on collectRows()
 	set collected to {}
 	tell application "System Events"
 		tell process "Passwords"
-			if not (exists window 1) then return collected
-			tell window 1
-				try
-					with timeout of 4 seconds
-						set theTables to every table of entire contents
-						repeat with tbl in theTables
+			tell outline 1 of scroll area 1 of group 2 of splitter group 1 of group 1 of window 1
+				set n to count of rows
+				if n > 40 then set n to 40
+				repeat with i from 1 to n
+					try
+						tell UI element 1 of row i
+							set siteName to (get value of static text 1) as string
+							set userName to ""
 							try
-								repeat with r in rows of tbl
-									set rowLine to rowLineFrom(r)
-									if rowLine is not "" then set end of collected to rowLine
-								end repeat
+								set userName to (get value of static text 2) as string
 							end try
-						end repeat
-					end timeout
-				end try
-				try
-					with timeout of 4 seconds
-						set theOutlines to every outline of entire contents
-						repeat with ol in theOutlines
-							try
-								repeat with r in rows of ol
-									set rowLine to rowLineFrom(r)
-									if rowLine is not "" then set end of collected to rowLine
-								end repeat
-							end try
-						end repeat
-					end timeout
-				end try
-				try
-					with timeout of 4 seconds
-						set theLists to every list of entire contents
-						repeat with lst in theLists
-							try
-								repeat with itm in UI elements of lst
-									set rowLine to rowLineFrom(itm)
-									if rowLine is not "" then set end of collected to rowLine
-								end repeat
-							end try
-						end repeat
-					end timeout
-				end try
+							if siteName is not "" then set end of collected to siteName & tab & userName
+						end tell
+					end try
+				end repeat
 			end tell
 		end tell
 	end tell
 	return collected
 end collectRows
 
-on rowLineFrom(theRow)
-	set titleText to ""
-	set userText to ""
-	set labelList to {}
-	try
-		tell application "System Events"
-			tell theRow
-				repeat with u in UI elements
-					try
-						set end of labelList to (value of u as string)
-					end try
-				end repeat
-			end tell
-		end tell
-	end try
-	if (count of labelList) ≥ 1 then set titleText to item 1 of labelList
-	if (count of labelList) ≥ 2 then set userText to item 2 of labelList
-	if titleText is "" then return ""
-	return titleText & tab & userText
-end rowLineFrom
-
 on selectFirstRow()
 	tell application "System Events"
 		tell process "Passwords"
 			try
-				tell window 1
-					set tbls to every table of entire contents
-					if (count of tbls) > 0 then
-						tell item 1 of tbls
-							if (count of rows) ≥ 1 then
-								set selected of row 1 to true
-								click row 1
-								delay 0.2
-								return true
-							end if
-						end tell
+				tell outline 1 of scroll area 1 of group 2 of splitter group 1 of group 1 of window 1
+					if (count of rows) ≥ 1 then
+						select row 1
+						click row 1
+						delay 0.2
+						return true
 					end if
 				end tell
 			end try
-			key code 125
-			delay 0.1
-			key code 36
-			delay 0.2
-			return true
 		end tell
 	end tell
+	return false
 end selectFirstRow
 
 on copyKind(kind)
@@ -412,11 +346,11 @@ on run argv
 			return "NEED_AX"
 		end try
 		launchPasswordsHidden()
+		tell application "System Events" to tell process "Passwords" to set frontmost to true
+		delay 0.25
 		clickUnlock()
-		my refocusAlfred()
 		if findSearchField() is missing value then return "LOCKED"
 		if not setSearch(q) then return "LOCKED"
-		my refocusAlfred()
 		set rows to collectRows()
 		my refocusAlfred()
 		if (count of rows) is 0 then return "EMPTY"
